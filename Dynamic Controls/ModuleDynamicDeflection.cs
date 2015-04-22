@@ -95,6 +95,8 @@ namespace Dynamic_Controls
             else
                 currentDeflection = (minLerp[1] + (dynPres - minLerp[0]) / (maxLerp[0] - minLerp[0]) * (maxLerp[1] - minLerp[1])) * deflection / 100;
 
+            Mathf.Clamp(currentDeflection, 0.01f, 89);
+
             if (usingFAR)
                 farValToSet.SetValue(module, currentDeflection);
             else
