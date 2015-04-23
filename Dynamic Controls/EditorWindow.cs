@@ -10,7 +10,6 @@ namespace Dynamic_Controls
     {
         public static EditorWindow Instance { get; private set; }
 
-        public ConfigNode defaults;
         const string nodeName = "DynamicDeflection";
         const string savePath = "GameData/Dynamic Controls/Defaults.cfg";
 
@@ -20,6 +19,11 @@ namespace Dynamic_Controls
 
         public static Rect windowRect = new Rect(300, 300, 0, 0);
 
+        public void Awake()
+        {
+            ModuleDynamicDeflection.defaults = GameDatabase.Instance.GetConfigNodes(nodeName).FirstOrDefault();
+        }
+
         public void Start()
         {
             if (!(HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneIsEditor))
@@ -27,8 +31,6 @@ namespace Dynamic_Controls
             Instance = this;
 
             moduleToDraw = null;
-
-            defaults = GameDatabase.Instance.GetConfigNodes(nodeName).FirstOrDefault();
         }
 
         public void Update()
@@ -63,15 +65,20 @@ namespace Dynamic_Controls
         {
             if (!(HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneIsEditor))
                 return;
-            if (defaults == null)
+            writeDefaultsToFile();
+        }
+
+        public void writeDefaultsToFile()
+        {
+            if (ModuleDynamicDeflection.defaults == null)
                 return;
             ConfigNode dummyNode = new ConfigNode();
             dummyNode.AddValue("dummy", "do not delete me");
-            dummyNode.AddNode(defaults);
+            dummyNode.AddNode(ModuleDynamicDeflection.defaults);
             dummyNode.Save(KSPUtil.ApplicationRootPath.Replace("\\", "/") + savePath);
         }
 
-        bool focus = false;
+        int focus = -1;
         private void drawWindow(int id)
         {
             if (moduleToDraw.deflectionAtPressure == null)
@@ -105,7 +112,10 @@ namespace Dynamic_Controls
                     list[0] = float.Parse(GUILayout.TextField(list[0].ToString("0.0#"), GUILayout.Width(60)));
                     if (moduleToDraw.deflectionAtPressure.Count - 1 == i)
                         GUI.SetNextControlName("deflection");
-                    list[1] = float.Parse(GUILayout.TextField(list[1].ToString("0.0"), GUILayout.Width(60)));
+                    string tmp = GUILayout.TextField(list[1].ToString("0.0") == "0.0" ? "" : list[1].ToString("0.0"), GUILayout.Width(60));
+                    Debug.Log(tmp);
+                    if (tmp != "")
+                        list[1] = float.Parse(tmp);
                     GUILayout.EndHorizontal();
                 }
                 else
@@ -117,11 +127,13 @@ namespace Dynamic_Controls
                     
                     deflection = GUILayout.TextField(deflection, GUILayout.Width(60));
                     GUILayout.EndHorizontal();
-                    if (focus)
+                    if (focus == 0)
                     {
                         GUI.FocusControl("deflection");
-                        focus = true;
+                        focus = -1;
                     }
+                    else if (focus > 0)
+                        focus--;
                     if (dynPressure != "" && GUI.GetNameOfFocusedControl() != "dynPress")
                     {
                         List<float> newEntry = new List<float>();
@@ -129,7 +141,7 @@ namespace Dynamic_Controls
                         newEntry.Add(Mathf.Abs(deflection != "" ? float.Parse(deflection) : 0));
                         moduleToDraw.deflectionAtPressure.Add(newEntry);
                         dynPressure = deflection = "";
-                        focus = true;
+                        focus = 5;
                     }
                 }
             }
@@ -139,6 +151,21 @@ namespace Dynamic_Controls
                 copyToAll();
                 removeFocus();
             }
+            GUILayout.Box("", GUILayout.Height(10));
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Defaults: ");
+            if (GUILayout.Button("Update"))
+            {
+                ConfigNode node = new ConfigNode(nodeName);
+                ModuleDynamicDeflection.defaults = toConfigNode(moduleToDraw.deflectionAtPressure, node);
+                writeDefaultsToFile();
+            }
+            if (GUILayout.Button("Restore"))
+            {
+                moduleToDraw.LoadConfig(ModuleDynamicDeflection.defaults, true);
+                windowRect.height = 0;
+            }
+            GUILayout.EndHorizontal();
             GUI.DragWindow();
         }
 
@@ -184,6 +211,18 @@ namespace Dynamic_Controls
             moduleToDraw = module;
             deflection = dynPressure = "";
             windowRect.height = 0;
+        }
+
+        public static ConfigNode toConfigNode(List<List<float>> list, ConfigNode node)
+        {
+            foreach (List<float> l in list)
+            {
+                if (l.Count < 2)
+                    continue;
+
+                node.AddValue("key", l[0].ToString() + "," + l[1].ToString());
+            }
+            return node;
         }
     }
 }

@@ -12,6 +12,8 @@ namespace Dynamic_Controls
         public List<List<float>> deflectionAtPressure; // int[0] = q, int[1] = deflection
         private bool usingFAR;
 
+        public static ConfigNode defaults;
+
         private PartModule module;
         private FieldInfo farValToSet;
 
@@ -26,7 +28,7 @@ namespace Dynamic_Controls
                 if (deflectionAtPressure == null)
                     deflectionAtPressure = new List<List<float>>();
 
-                StartCoroutine(waitToLoad(node));
+                LoadConfig(node);
             }
             catch
             {
@@ -34,15 +36,9 @@ namespace Dynamic_Controls
             }
         }
 
-        IEnumerator waitToLoad(ConfigNode node)
+        public void LoadConfig(ConfigNode node, bool loadingDefaults = false)
         {
-            for (int i = 0; i < 2; i++)
-                yield return null;
-            LoadConfig(node, false);
-        }
-
-        void LoadConfig(ConfigNode node, bool loadingDefaults = false)
-        {
+            deflectionAtPressure.Clear();
             foreach (string s in node.GetValues("key"))
             {
                 string[] kvp = s.Split(',');
@@ -54,10 +50,10 @@ namespace Dynamic_Controls
                 if (loadingDefaults)
                 {
                     deflectionAtPressure.Add(new List<float>() { 0, 100 });
-                    EditorWindow.Instance.defaults.AddValue("key", "0,100");
+                    defaults.AddValue("key", "0,100");
                 }
                 else
-                    LoadConfig(EditorWindow.Instance.defaults, true);
+                    LoadConfig(defaults, true);
             }
         }
 
@@ -145,8 +141,7 @@ namespace Dynamic_Controls
                 if (deflectionAtPressure == null)
                     return;
 
-                foreach (List<float> kvp in deflectionAtPressure)
-                    node.AddValue("key", kvp[0].ToString() + "," + kvp[1].ToString());
+                node = EditorWindow.toConfigNode(deflectionAtPressure, node);
             }
             catch
             {
