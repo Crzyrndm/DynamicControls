@@ -74,8 +74,8 @@ namespace Dynamic_Controls
                     windowRect.height = 0;
                     removeFocus();
                 }
-                list[0] = float.Parse(GUILayout.TextField(list[0].ToString("0.##"), GUILayout.Width(60)));
-                list[1] = float.Parse(GUILayout.TextField(list[1].ToString("0.#"), GUILayout.Width(60)));
+                list[0] = float.Parse(GUILayout.TextField(list[0].ToString("0.0#"), GUILayout.Width(60)));
+                list[1] = float.Parse(GUILayout.TextField(list[1].ToString("0.0#"), GUILayout.Width(60)));
                 GUILayout.EndHorizontal();
             }
             GUILayout.Space(20);
