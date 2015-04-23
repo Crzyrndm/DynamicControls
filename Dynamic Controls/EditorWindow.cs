@@ -10,7 +10,7 @@ namespace Dynamic_Controls
     {
         public static EditorWindow Instance { get; private set; }
 
-        const string nodeName = "DynamicDeflection";
+        public const string nodeName = "DynamicDeflection";
         const string savePath = "GameData/Dynamic Controls/Defaults.cfg";
 
         public ModuleDynamicDeflection moduleToDraw;

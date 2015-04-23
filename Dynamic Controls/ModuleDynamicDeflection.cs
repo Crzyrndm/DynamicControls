@@ -54,7 +54,12 @@ namespace Dynamic_Controls
                     defaults.AddValue("key", "0,100");
                 }
                 else
+                {
+                    if (defaults == null)
+                        defaults = new ConfigNode(EditorWindow.nodeName);
+
                     LoadConfig(defaults, true);
+                }
             }
         }
 
@@ -78,6 +83,9 @@ namespace Dynamic_Controls
                     deflection = (module as ModuleControlSurface).ctrlSurfaceRange;
 
                 deflectionAtPressure = new List<List<float>>();
+
+                if (defaults == null)
+                    defaults = new ConfigNode(EditorWindow.nodeName);
                 LoadConfig(defaults, true);
             }
         }
