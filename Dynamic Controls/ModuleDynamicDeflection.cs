@@ -81,6 +81,7 @@ namespace Dynamic_Controls
                 return;
 
             float dynPres = getQ() / 1000; // kPa
+            Log(dynPres);
             List<float> minLerp = null, maxLerp = null;
             foreach (List<float> x in deflectionAtPressure)
             {
@@ -155,11 +156,38 @@ namespace Dynamic_Controls
 
             toLog.Clear();
         }
+        #endregion
 
         private float getQ() // roughly. no compensation for mach or temperature
         {
-            return (float)(FlightGlobals.getAtmDensity(FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody)) * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5);
+            if (usingFAR)
+                return (float)(getCurrentDensity() * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5);
+            else
+                return (float)(FlightGlobals.getAtmDensity(FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody)) * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5);
         }
-        #endregion
+
+        /// <summary>
+        /// FAR rho calculation
+        /// </summary>
+        /// <returns></returns>
+        private double getCurrentDensity()
+        {
+            double altitude = vessel.mainBody.GetAltitude(part.transform.position);
+            double temp = Math.Max(0.1, 273.15 + FlightGlobals.getExternalTemperature((float)altitude, vessel.mainBody));
+            double currentBodyAtmPressureOffset;
+
+            if (vessel.mainBody.useLegacyAtmosphere && vessel.mainBody.atmosphere)
+            {
+                currentBodyAtmPressureOffset = vessel.mainBody.atmosphereMultiplier * 1e-6;
+            }
+            else
+                currentBodyAtmPressureOffset = 0;
+
+            double pressure = FlightGlobals.getStaticPressure(part.transform.position, vessel.mainBody);
+            if (pressure > 0)
+                pressure = (pressure - currentBodyAtmPressureOffset) * 101300;     //Need to convert atm to Pa
+
+            return pressure / (temp * 287);
+        }
     }
 }
