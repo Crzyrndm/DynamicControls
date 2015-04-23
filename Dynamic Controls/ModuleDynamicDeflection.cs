@@ -27,7 +27,6 @@ namespace Dynamic_Controls
             {
                 if (deflectionAtPressure == null)
                     deflectionAtPressure = new List<List<float>>();
-
                 LoadConfig(node);
             }
             catch
@@ -38,6 +37,8 @@ namespace Dynamic_Controls
 
         public void LoadConfig(ConfigNode node, bool loadingDefaults = false)
         {
+            float.TryParse(node.GetValue("deflection"), out deflection);
+
             deflectionAtPressure.Clear();
             foreach (string s in node.GetValues("key"))
             {
@@ -67,12 +68,18 @@ namespace Dynamic_Controls
                 module = part.Modules["ModuleControlSurface"];
 
             if (usingFAR)
-            {
                 farValToSet = module.GetType().GetField("maxdeflect");
-                deflection = (float)farValToSet.GetValue(module);
+
+            if (deflectionAtPressure == null)
+            {
+                if (usingFAR)
+                    deflection = (float)farValToSet.GetValue(module);
+                else
+                    deflection = (module as ModuleControlSurface).ctrlSurfaceRange;
+
+                deflectionAtPressure = new List<List<float>>();
+                LoadConfig(defaults, true);
             }
-            else
-                deflection = (module as ModuleControlSurface).ctrlSurfaceRange;
         }
 
         public void Update()
@@ -141,7 +148,7 @@ namespace Dynamic_Controls
                 if (deflectionAtPressure == null)
                     return;
 
-                node = EditorWindow.toConfigNode(deflectionAtPressure, node);
+                node = EditorWindow.toConfigNode(deflectionAtPressure, node, false, deflection);
             }
             catch
             {

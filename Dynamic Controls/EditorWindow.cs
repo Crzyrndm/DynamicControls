@@ -37,7 +37,7 @@ namespace Dynamic_Controls
         {
             if (!(HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneIsEditor) || moduleToDraw == null)
                 return;
-
+            moduleToDraw.deflectionAtPressure.RemoveAll(l => l[0] < 0 || l[1] < 0); // set less than zero to remove from list
             if (Input.GetMouseButtonDown(0))
             {
                 Vector2 mouse = Input.mousePosition;
@@ -48,8 +48,6 @@ namespace Dynamic_Controls
                     moduleToDraw = null;
                 }
             }
-
-            moduleToDraw.deflectionAtPressure.RemoveAll(l => l[0] < 0 || l[1] < 0); // set less than zero to remove from list
         }
 
         public void OnGUI()
@@ -86,7 +84,7 @@ namespace Dynamic_Controls
 
             GUILayout.Label("100% deflection: " + moduleToDraw.deflection.ToString("0.#") + " degrees");
             if (HighLogic.LoadedSceneIsFlight)
-                GUILayout.Label("Deflection @ Q(" + moduleToDraw.Q.ToString("0.0") + ") = " + moduleToDraw.currentDeflection.ToString("0.0"));
+                GUILayout.Label("Deflect @ Q(" + moduleToDraw.Q.ToString("0.0") + ") = " + moduleToDraw.currentDeflection.ToString("0.0") + "(" + (moduleToDraw.currentDeflection * 100 / moduleToDraw.deflection).ToString("0.0") + "%)");
             GUILayout.Box("", GUILayout.Height(10));
             GUILayout.BeginHorizontal();
             GUILayout.Space(77);
@@ -113,7 +111,6 @@ namespace Dynamic_Controls
                     if (moduleToDraw.deflectionAtPressure.Count - 1 == i)
                         GUI.SetNextControlName("deflection");
                     string tmp = GUILayout.TextField(list[1].ToString("0.0") == "0.0" ? "" : list[1].ToString("0.0"), GUILayout.Width(60));
-                    Debug.Log(tmp);
                     if (tmp != "")
                         list[1] = float.Parse(tmp);
                     GUILayout.EndHorizontal();
@@ -157,7 +154,7 @@ namespace Dynamic_Controls
             if (GUILayout.Button("Update"))
             {
                 ConfigNode node = new ConfigNode(nodeName);
-                ModuleDynamicDeflection.defaults = toConfigNode(moduleToDraw.deflectionAtPressure, node);
+                ModuleDynamicDeflection.defaults = toConfigNode(moduleToDraw.deflectionAtPressure, node, true);
                 writeDefaultsToFile();
             }
             if (GUILayout.Button("Restore"))
@@ -213,8 +210,10 @@ namespace Dynamic_Controls
             windowRect.height = 0;
         }
 
-        public static ConfigNode toConfigNode(List<List<float>> list, ConfigNode node)
+        public static ConfigNode toConfigNode(List<List<float>> list, ConfigNode node, bool defaults, float fullDeflect = 0)
         {
+            if (!defaults)
+                node.AddValue("deflection", fullDeflect); // defaults can't save 100% deflection
             foreach (List<float> l in list)
             {
                 if (l.Count < 2)
