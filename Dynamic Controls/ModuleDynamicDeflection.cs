@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using UnityEngine;
 using System.Reflection;
@@ -25,18 +26,38 @@ namespace Dynamic_Controls
                 if (deflectionAtPressure == null)
                     deflectionAtPressure = new List<List<float>>();
 
-                foreach (string s in node.GetValues("key"))
-                {
-                    string[] kvp = s.Split(',');
-                    List<float> val = new List<float>() { Mathf.Abs(float.Parse(kvp[0].Trim())), Mathf.Abs(float.Parse(kvp[1].Trim())) };
-                    deflectionAtPressure.Add(val);
-                }
-                if (deflectionAtPressure.Count == 0)
-                    deflectionAtPressure.Add(new List<float>() { 0, 100 });
+                StartCoroutine(waitToLoad(node));
             }
             catch
             {
                 Log("OnLoad failed");
+            }
+        }
+
+        IEnumerator waitToLoad(ConfigNode node)
+        {
+            for (int i = 0; i < 2; i++)
+                yield return null;
+            LoadConfig(node, false);
+        }
+
+        void LoadConfig(ConfigNode node, bool loadingDefaults = false)
+        {
+            foreach (string s in node.GetValues("key"))
+            {
+                string[] kvp = s.Split(',');
+                List<float> val = new List<float>() { Mathf.Abs(float.Parse(kvp[0].Trim())), Mathf.Abs(float.Parse(kvp[1].Trim())) };
+                deflectionAtPressure.Add(val);
+            }
+            if (deflectionAtPressure.Count == 0)
+            {
+                if (loadingDefaults)
+                {
+                    deflectionAtPressure.Add(new List<float>() { 0, 100 });
+                    EditorWindow.Instance.defaults.AddValue("key", "0,100");
+                }
+                else
+                    LoadConfig(EditorWindow.Instance.defaults, true);
             }
         }
 

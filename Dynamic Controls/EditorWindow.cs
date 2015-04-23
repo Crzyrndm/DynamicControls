@@ -10,6 +10,10 @@ namespace Dynamic_Controls
     {
         public static EditorWindow Instance { get; private set; }
 
+        public ConfigNode defaults;
+        const string nodeName = "DynamicDeflection";
+        const string savePath = "GameData/Dynamic Controls/Defaults.cfg";
+
         public ModuleDynamicDeflection moduleToDraw;
         string dynPressure = "";
         string deflection = "";
@@ -23,6 +27,8 @@ namespace Dynamic_Controls
             Instance = this;
 
             moduleToDraw = null;
+
+            defaults = GameDatabase.Instance.GetConfigNodes(nodeName).FirstOrDefault();
         }
 
         public void Update()
@@ -51,6 +57,18 @@ namespace Dynamic_Controls
 
             if (moduleToDraw != null)
                 windowRect = GUILayout.Window(7463908, windowRect, drawWindow, "");
+        }
+
+        public void OnDestroy()
+        {
+            if (!(HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneIsEditor))
+                return;
+            if (defaults == null)
+                return;
+            ConfigNode dummyNode = new ConfigNode();
+            dummyNode.AddValue("dummy", "do not delete me");
+            dummyNode.AddNode(defaults);
+            dummyNode.Save(KSPUtil.ApplicationRootPath.Replace("\\", "/") + savePath);
         }
 
         bool focus = false;
@@ -115,8 +133,6 @@ namespace Dynamic_Controls
                     }
                 }
             }
-
-            
 
             if (GUILayout.Button("Copy to all"))
             {
