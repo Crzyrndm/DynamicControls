@@ -56,27 +56,31 @@ namespace Dynamic_Controls
             if (moduleToDraw.deflectionAtPressure == null)
                 moduleToDraw.deflectionAtPressure = new List<List<float>>();
 
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(98);
+            GUILayout.Label("Q (kPa)", GUILayout.Width(53));
+            GUILayout.Label("% Deflect", GUILayout.Width(57));
+            GUILayout.EndHorizontal();
+
             foreach (List<float> list in moduleToDraw.deflectionAtPressure)
             {
                 if (list.Count < 2)
                     continue;
 
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Remove Key", GUILayout.Width(100)))
+                if (GUILayout.Button("Remove Key", GUILayout.Width(88)))
                 {
                     list[1] = -1;
                     windowRect.height = 0;
                     removeFocus();
                 }
-                GUILayout.Label("\tQ (kPa)", GUILayout.Width(80));
-                list[0] = float.Parse(GUILayout.TextField(list[0].ToString("0.##"), GUILayout.Width(50)));
-                GUILayout.Label("\t% Deflect", GUILayout.Width(100));
-                list[1] = float.Parse(GUILayout.TextField(list[1].ToString("0.#"), GUILayout.Width(50)));
+                list[0] = float.Parse(GUILayout.TextField(list[0].ToString("0.##"), GUILayout.Width(60)));
+                list[1] = float.Parse(GUILayout.TextField(list[1].ToString("0.#"), GUILayout.Width(60)));
                 GUILayout.EndHorizontal();
             }
-            GUILayout.Space(40);
+            GUILayout.Space(20);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Add Key", GUILayout.Width(100)))
+            if (GUILayout.Button("Add Key", GUILayout.Width(88)))
             {
                 List<float> newEntry = new List<float>();
                 newEntry.Add(Mathf.Abs(float.Parse(dynPressure)));
@@ -86,10 +90,8 @@ namespace Dynamic_Controls
 
                 removeFocus();
             }
-            GUILayout.Label("\tQ (kPa)", GUILayout.Width(80));
-            dynPressure = GUILayout.TextField(dynPressure, GUILayout.Width(50));
-            GUILayout.Label("\t % deflect", GUILayout.Width(100));
-            deflection = GUILayout.TextField(deflection, GUILayout.Width(50));
+            dynPressure = GUILayout.TextField(dynPressure, GUILayout.Width(60));
+            deflection = GUILayout.TextField(deflection, GUILayout.Width(60));
             GUILayout.EndHorizontal();
 
             if (GUILayout.Button("Copy to all"))
