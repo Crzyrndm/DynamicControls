@@ -40,6 +40,8 @@ namespace Dynamic_Controls
                     moduleToDraw = null;
                 }
             }
+
+            moduleToDraw.deflectionAtPressure.RemoveAll(l => l[0] < 0 || l[1] < 0); // set less than zero to remove from list
         }
 
         public void OnGUI()
@@ -51,56 +53,76 @@ namespace Dynamic_Controls
                 windowRect = GUILayout.Window(7463908, windowRect, drawWindow, "");
         }
 
+        bool focus = false;
         private void drawWindow(int id)
         {
             if (moduleToDraw.deflectionAtPressure == null)
                 moduleToDraw.deflectionAtPressure = new List<List<float>>();
 
+            GUILayout.Label("100% deflection: " + moduleToDraw.deflection.ToString("0.#") + " degrees");
+            if (HighLogic.LoadedSceneIsFlight)
+                GUILayout.Label("Deflection @ Q(" + moduleToDraw.Q.ToString("0.0") + ") = " + moduleToDraw.currentDeflection.ToString("0.0"));
+            GUILayout.Box("", GUILayout.Height(10));
             GUILayout.BeginHorizontal();
-            GUILayout.Space(98);
+            GUILayout.Space(77);
             GUILayout.Label("Q (kPa)", GUILayout.Width(53));
             GUILayout.Label("% Deflect", GUILayout.Width(57));
             GUILayout.EndHorizontal();
 
-            foreach (List<float> list in moduleToDraw.deflectionAtPressure)
+            for (int i = 0; i <= moduleToDraw.deflectionAtPressure.Count; i++)
             {
-                if (list.Count < 2)
-                    continue;
-
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("Remove Key", GUILayout.Width(88)))
+                if (i < moduleToDraw.deflectionAtPressure.Count)
                 {
-                    list[1] = -1;
-                    windowRect.height = 0;
-                    removeFocus();
-                }
-                list[0] = float.Parse(GUILayout.TextField(list[0].ToString("0.0#"), GUILayout.Width(60)));
-                list[1] = float.Parse(GUILayout.TextField(list[1].ToString("0.0#"), GUILayout.Width(60)));
-                GUILayout.EndHorizontal();
-            }
-            GUILayout.Space(20);
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Add Key", GUILayout.Width(88)))
-            {
-                List<float> newEntry = new List<float>();
-                newEntry.Add(Mathf.Abs(float.Parse(dynPressure)));
-                newEntry.Add(Mathf.Abs(float.Parse(deflection)));
-                moduleToDraw.deflectionAtPressure.Add(newEntry);
-                dynPressure = deflection = "";
+                    List<float> list = moduleToDraw.deflectionAtPressure[i];
+                    if (list.Count < 2)
+                        continue;
 
-                removeFocus();
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button("Remove", GUILayout.Width(65)))
+                    {
+                        list[1] = -1;
+                        windowRect.height = 0;
+                        removeFocus();
+                    }
+                    list[0] = float.Parse(GUILayout.TextField(list[0].ToString("0.0#"), GUILayout.Width(60)));
+                    if (moduleToDraw.deflectionAtPressure.Count - 1 == i)
+                        GUI.SetNextControlName("deflection");
+                    list[1] = float.Parse(GUILayout.TextField(list[1].ToString("0.0"), GUILayout.Width(60)));
+                    GUILayout.EndHorizontal();
+                }
+                else
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Space(70);
+                    GUI.SetNextControlName("dynPress");
+                    dynPressure = GUILayout.TextField(dynPressure, GUILayout.Width(60));
+                    
+                    deflection = GUILayout.TextField(deflection, GUILayout.Width(60));
+                    GUILayout.EndHorizontal();
+                    if (focus)
+                    {
+                        GUI.FocusControl("deflection");
+                        focus = true;
+                    }
+                    if (dynPressure != "" && GUI.GetNameOfFocusedControl() != "dynPress")
+                    {
+                        List<float> newEntry = new List<float>();
+                        newEntry.Add(Mathf.Abs(float.Parse(dynPressure)));
+                        newEntry.Add(Mathf.Abs(deflection != "" ? float.Parse(deflection) : 0));
+                        moduleToDraw.deflectionAtPressure.Add(newEntry);
+                        dynPressure = deflection = "";
+                        focus = true;
+                    }
+                }
             }
-            dynPressure = GUILayout.TextField(dynPressure, GUILayout.Width(60));
-            deflection = GUILayout.TextField(deflection, GUILayout.Width(60));
-            GUILayout.EndHorizontal();
+
+            
 
             if (GUILayout.Button("Copy to all"))
             {
                 copyToAll();
                 removeFocus();
             }
-
-            moduleToDraw.deflectionAtPressure.RemoveAll(l => l[1] < 0); // set deflection less than zero to remove from list
             GUI.DragWindow();
         }
 

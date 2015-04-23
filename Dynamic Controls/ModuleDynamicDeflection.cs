@@ -14,11 +14,9 @@ namespace Dynamic_Controls
         private PartModule module;
         private FieldInfo farValToSet;
 
-        [KSPField(guiActive = true, guiName = "Max Deflect", guiActiveEditor = false)]
         public float deflection;
-
-        [KSPField(guiActive = true, guiName = "Deflection", guiActiveEditor = false)]
         public float currentDeflection;
+        public float Q;
 
         public override void OnLoad(ConfigNode node) // dynamic deflection node with actions and events subnodes
         {
@@ -70,6 +68,14 @@ namespace Dynamic_Controls
                 if (p != null)
                     EditorWindow.copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, deflectionAtPressure);
             }
+
+            if (HighLogic.LoadedSceneIsEditor)
+            {
+                if (usingFAR)
+                    deflection = (float)farValToSet.GetValue(module);
+                else
+                    deflection = (module as ModuleControlSurface).ctrlSurfaceRange;
+            }
         }
 
         public void FixedUpdate()
@@ -77,15 +83,11 @@ namespace Dynamic_Controls
             if (!HighLogic.LoadedSceneIsFlight)
                 return;
 
-            if (deflectionAtPressure.Count == 1)
-                return;
-
-            float dynPres = getQ() / 1000; // kPa
-            Log(dynPres);
+            Q = getQ(); // kPa
             List<float> minLerp = null, maxLerp = null;
             foreach (List<float> x in deflectionAtPressure)
             {
-                if (x[0] < dynPres)
+                if (x[0] < Q)
                     minLerp = x;
                 else
                 {
@@ -98,7 +100,7 @@ namespace Dynamic_Controls
             else if (maxLerp == null)
                 currentDeflection = minLerp[1] * deflection / 100; // dynamic pressure more than last checkpoint
             else
-                currentDeflection = (minLerp[1] + (dynPres - minLerp[0]) / (maxLerp[0] - minLerp[0]) * (maxLerp[1] - minLerp[1])) * deflection / 100;
+                currentDeflection = (minLerp[1] + (Q - minLerp[0]) / (maxLerp[0] - minLerp[0]) * (maxLerp[1] - minLerp[1])) * deflection / 100;
 
             currentDeflection = Mathf.Clamp(currentDeflection, 0.01f, 89);
 
@@ -163,7 +165,7 @@ namespace Dynamic_Controls
             if (usingFAR)
                 return (float)(getCurrentDensity() * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5);
             else
-                return (float)(FlightGlobals.getAtmDensity(FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody)) * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5);
+                return (float)(FlightGlobals.getAtmDensity(FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody)) * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5) / 1000f;
         }
 
         /// <summary>
@@ -174,18 +176,13 @@ namespace Dynamic_Controls
         {
             double altitude = vessel.mainBody.GetAltitude(part.transform.position);
             double temp = Math.Max(0.1, 273.15 + FlightGlobals.getExternalTemperature((float)altitude, vessel.mainBody));
-            double currentBodyAtmPressureOffset;
-
+            double currentBodyAtmPressureOffset = 0;
             if (vessel.mainBody.useLegacyAtmosphere && vessel.mainBody.atmosphere)
-            {
                 currentBodyAtmPressureOffset = vessel.mainBody.atmosphereMultiplier * 1e-6;
-            }
-            else
-                currentBodyAtmPressureOffset = 0;
 
             double pressure = FlightGlobals.getStaticPressure(part.transform.position, vessel.mainBody);
             if (pressure > 0)
-                pressure = (pressure - currentBodyAtmPressureOffset) * 101300;     //Need to convert atm to Pa
+                pressure = (pressure - currentBodyAtmPressureOffset) * 101.3;     //Need to convert atm to kPa
 
             return pressure / (temp * 287);
         }
