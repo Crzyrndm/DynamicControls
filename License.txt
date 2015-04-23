@@ -1,0 +1,1 @@
+Plugin is licensed under GPL v3

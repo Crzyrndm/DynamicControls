@@ -8,7 +8,7 @@ namespace Dynamic_Controls
 {
     public class ModuleDynamicDeflection : PartModule
     {
-        public List<List<float>> deflectionAtPressure; // int[0] = q, int[1] = deflection
+        public List<List<float>> deflectionAtPressure = new List<List<float>>(); // int[0] = q, int[1] = deflection
         private bool usingFAR;
 
         private PartModule module;
@@ -22,17 +22,25 @@ namespace Dynamic_Controls
 
         public override void OnLoad(ConfigNode node) // dynamic deflection node with actions and events subnodes
         {
-            if (deflectionAtPressure == null)
-                deflectionAtPressure = new List<List<float>>();
-
-            foreach (string s in node.GetValues("key"))
+            try
             {
-                string[] kvp = s.Split(',');
-                List<float> val = new List<float>() { Mathf.Abs(float.Parse(kvp[0].Trim())), Mathf.Abs(float.Parse(kvp[1].Trim())) };
-                deflectionAtPressure.Add(val);
+                if (deflectionAtPressure == null)
+                    deflectionAtPressure = new List<List<float>>();
+
+                foreach (string s in node.GetValues("key"))
+                {
+                    string[] kvp = s.Split(',');
+                    List<float> val = new List<float>() { Mathf.Abs(float.Parse(kvp[0].Trim())), Mathf.Abs(float.Parse(kvp[1].Trim())) };
+                    deflectionAtPressure.Add(val);
+                }
+                if (deflectionAtPressure.Count == 0)
+                    deflectionAtPressure.Add(new List<float>() { 0, 100 });
+            }
+            catch
+            {
+                Log("OnLoad failed");
             }
         }
-
 
         public void Start()
         {
@@ -50,8 +58,6 @@ namespace Dynamic_Controls
             }
             else
                 deflection = (module as ModuleControlSurface).ctrlSurfaceRange;
-            if (deflectionAtPressure.Count == 0)
-                deflectionAtPressure.Add(new List<float>() { 0, deflection });
         }
 
         public void Update()
@@ -59,9 +65,7 @@ namespace Dynamic_Controls
             foreach (Part p in part.symmetryCounterparts)
             {
                 if (p != null)
-                {
                     (p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection).deflectionAtPressure = deflectionAtPressure;
-                }
             }
         }
 
@@ -69,9 +73,6 @@ namespace Dynamic_Controls
         {
             if (!HighLogic.LoadedSceneIsFlight)
                 return;
-
-            if (deflectionAtPressure.Count == 0)
-                deflectionAtPressure.Add(new List<float>() { 0, 100 });
 
             if (deflectionAtPressure.Count == 1)
                 return;
@@ -89,13 +90,13 @@ namespace Dynamic_Controls
                 }
             }
             if (minLerp == null)
-                currentDeflection = maxLerp[1] * deflection / 100; // dynamic pressure too high
+                currentDeflection = maxLerp[1] * deflection / 100; // dynamic pressure less than first checkpoint
             else if (maxLerp == null)
-                currentDeflection = minLerp[1] * deflection / 100; // dynamic pressure too low
+                currentDeflection = minLerp[1] * deflection / 100; // dynamic pressure more than last checkpoint
             else
                 currentDeflection = (minLerp[1] + (dynPres - minLerp[0]) / (maxLerp[0] - minLerp[0]) * (maxLerp[1] - minLerp[1])) * deflection / 100;
 
-            Mathf.Clamp(currentDeflection, 0.01f, 89);
+            currentDeflection = Mathf.Clamp(currentDeflection, 0.01f, 89);
 
             if (usingFAR)
                 farValToSet.SetValue(module, currentDeflection);
@@ -106,24 +107,31 @@ namespace Dynamic_Controls
         private void OnMouseOver()
         {
             if (Input.GetKeyDown(KeyCode.K))
+            {
                 EditorWindow.moduleToDraw = this;
+                EditorWindow.windowRect.height = 0;
+                deflectionAtPressure = deflectionAtPressure.OrderBy(x => x[0]).ToList();
+            }
         }
 
         public override void OnSave(ConfigNode node)
         {
-            base.OnSave(node);
-            if (deflectionAtPressure == null)
-                return;
+            try
+            {
+                base.OnSave(node);
+                if (deflectionAtPressure == null)
+                    return;
 
-            foreach (List<float> pair in deflectionAtPressure)
-                node.AddValue("key", pair[0].ToString() + "," + pair[1].ToString());
+                foreach (List<float> kvp in deflectionAtPressure)
+                    node.AddValue("key", kvp[0].ToString() + "," + kvp[1].ToString());
+            }
+            catch
+            {
+                Log("Onsave failed");
+            }
         }
 
-        public void OnDestroy()
-        {
-
-        }
-
+        #region logging
         private void LateUpdate()
         {
             dumpLog();
@@ -153,5 +161,6 @@ namespace Dynamic_Controls
         {
             return (float)(FlightGlobals.getAtmDensity(FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody)) * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5);
         }
+        #endregion
     }
 }
