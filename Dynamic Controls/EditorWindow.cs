@@ -130,7 +130,9 @@ namespace Dynamic_Controls
 
         public static void copyToModule(ModuleDynamicDeflection m, List<List<float>> list)
         {
-            m.deflectionAtPressure = new List<List<float>>(list);
+            m.deflectionAtPressure = new List<List<float>>();
+            foreach (List<float> kvp in list)
+                m.deflectionAtPressure.Add(new List<float>(kvp));
         }
 
         private void removeFocus()
