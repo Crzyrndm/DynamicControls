@@ -8,7 +8,7 @@ namespace Dynamic_Controls
 {
     public class ModuleDynamicDeflection : PartModule
     {
-        public List<List<float>> deflectionAtPressure = new List<List<float>>(); // int[0] = q, int[1] = deflection
+        public List<List<float>> deflectionAtPressure; // int[0] = q, int[1] = deflection
         private bool usingFAR;
 
         private PartModule module;
@@ -62,10 +62,13 @@ namespace Dynamic_Controls
 
         public void Update()
         {
+            if (EditorWindow.Instance.moduleToDraw != this)
+                return;
+
             foreach (Part p in part.symmetryCounterparts)
             {
                 if (p != null)
-                    (p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection).deflectionAtPressure = deflectionAtPressure;
+                    EditorWindow.copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, deflectionAtPressure);
             }
         }
 
@@ -107,11 +110,7 @@ namespace Dynamic_Controls
         private void OnMouseOver()
         {
             if (Input.GetKeyDown(KeyCode.K))
-            {
-                EditorWindow.moduleToDraw = this;
-                EditorWindow.windowRect.height = 0;
-                deflectionAtPressure = deflectionAtPressure.OrderBy(x => x[0]).ToList();
-            }
+                EditorWindow.Instance.selectNewPart(this);
         }
 
         public override void OnSave(ConfigNode node)

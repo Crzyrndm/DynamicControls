@@ -8,7 +8,9 @@ namespace Dynamic_Controls
     [KSPAddon(KSPAddon.Startup.EveryScene, false)]
     class EditorWindow : MonoBehaviour
     {
-        public static ModuleDynamicDeflection moduleToDraw;
+        public static EditorWindow Instance { get; private set; }
+
+        public ModuleDynamicDeflection moduleToDraw;
         string dynPressure = "";
         string deflection = "";
 
@@ -18,6 +20,7 @@ namespace Dynamic_Controls
         {
             if (!(HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneIsEditor))
                 return;
+            Instance = this;
 
             moduleToDraw = null;
         }
@@ -50,17 +53,20 @@ namespace Dynamic_Controls
 
         private void drawWindow(int id)
         {
+            if (moduleToDraw.deflectionAtPressure == null)
+                moduleToDraw.deflectionAtPressure = new List<List<float>>();
+
             foreach (List<float> list in moduleToDraw.deflectionAtPressure)
             {
+                if (list.Count < 2)
+                    continue;
+
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button("Remove Key", GUILayout.Width(100)))
                 {
                     list[1] = -1;
                     windowRect.height = 0;
                     removeFocus();
-
-                    foreach (Part p in moduleToDraw.part.symmetryCounterparts)
-                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure);
                 }
                 GUILayout.Label("\tQ (kPa)", GUILayout.Width(80));
                 list[0] = float.Parse(GUILayout.TextField(list[0].ToString("0.##"), GUILayout.Width(50)));
@@ -79,8 +85,6 @@ namespace Dynamic_Controls
                 dynPressure = deflection = "";
 
                 removeFocus();
-                foreach (Part p in moduleToDraw.part.symmetryCounterparts)
-                    copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure);
             }
             GUILayout.Label("\tQ (kPa)", GUILayout.Width(80));
             dynPressure = GUILayout.TextField(dynPressure, GUILayout.Width(50));
@@ -88,14 +92,13 @@ namespace Dynamic_Controls
             deflection = GUILayout.TextField(deflection, GUILayout.Width(50));
             GUILayout.EndHorizontal();
 
+            if (GUILayout.Button("Copy to all"))
+            {
+                copyToAll();
+                removeFocus();
+            }
+
             moduleToDraw.deflectionAtPressure.RemoveAll(l => l[1] < 0); // set deflection less than zero to remove from list
-
-            //if (GUILayout.Button("Copy to all"))
-            //{
-            //    copyToAll();
-            //    removeFocus();
-            //}
-
             GUI.DragWindow();
         }
 
@@ -118,11 +121,7 @@ namespace Dynamic_Controls
                     if (p == null)
                         continue;
                     if (p.Modules.Contains("ModuleDynamicDeflection"))
-                    {
-                        ModuleDynamicDeflection module = p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection;
-                        module.deflectionAtPressure = moduleToDraw.deflectionAtPressure;
-                        Debug.Log(module.deflectionAtPressure.Count);
-                    }
+                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure);
                 }
             }
         }
@@ -136,6 +135,13 @@ namespace Dynamic_Controls
         {
             GUI.FocusControl("Copy to all");
             GUI.UnfocusWindow();
+        }
+
+        public void selectNewPart(ModuleDynamicDeflection module)
+        {
+            moduleToDraw = module;
+            deflection = dynPressure = "";
+            windowRect.height = 0;
         }
     }
 }
