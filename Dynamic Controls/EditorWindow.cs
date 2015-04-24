@@ -175,7 +175,7 @@ namespace Dynamic_Controls
                     if (p == null)
                         continue;
                     if (p.Modules.Contains("ModuleDynamicDeflection"))
-                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure);
+                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure, moduleToDraw.deflection);
                 }
             }
             else
@@ -185,13 +185,14 @@ namespace Dynamic_Controls
                     if (p == null)
                         continue;
                     if (p.Modules.Contains("ModuleDynamicDeflection"))
-                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure);
+                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure, moduleToDraw.deflection);
                 }
             }
         }
 
-        public static void copyToModule(ModuleDynamicDeflection m, List<List<float>> list)
+        public static void copyToModule(ModuleDynamicDeflection m, List<List<float>> list, float maxDeflect)
         {
+            m.deflection = maxDeflect;
             m.deflectionAtPressure = new List<List<float>>();
             foreach (List<float> kvp in list)
                 m.deflectionAtPressure.Add(new List<float>(kvp));

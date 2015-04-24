@@ -29,16 +29,17 @@ namespace Dynamic_Controls
                     deflectionAtPressure = new List<List<float>>();
                 LoadConfig(node);
             }
-            catch
+            catch (Exception ex)
             {
                 Log("OnLoad failed");
+                Log(ex.InnerException);
+                Log(ex.StackTrace);
             }
         }
 
         public void LoadConfig(ConfigNode node, bool loadingDefaults = false)
         {
             float.TryParse(node.GetValue("deflection"), out deflection);
-
             deflectionAtPressure.Clear();
             foreach (string s in node.GetValues("key"))
             {
@@ -77,17 +78,22 @@ namespace Dynamic_Controls
 
             if (deflectionAtPressure == null)
             {
-                if (usingFAR)
-                    deflection = (float)farValToSet.GetValue(module);
-                else
-                    deflection = (module as ModuleControlSurface).ctrlSurfaceRange;
-
+                StartCoroutine(InitDeflection());
                 deflectionAtPressure = new List<List<float>>();
 
                 if (defaults == null)
                     defaults = new ConfigNode(EditorWindow.nodeName);
                 LoadConfig(defaults, true);
             }
+        }
+
+        IEnumerator InitDeflection()
+        {
+            yield return null;
+            if (usingFAR)
+                deflection = (float)farValToSet.GetValue(module);
+            else
+                deflection = (module as ModuleControlSurface).ctrlSurfaceRange;
         }
 
         public void Update()
@@ -98,7 +104,7 @@ namespace Dynamic_Controls
             foreach (Part p in part.symmetryCounterparts)
             {
                 if (p != null)
-                    EditorWindow.copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, deflectionAtPressure);
+                    EditorWindow.copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, deflectionAtPressure, deflection);
             }
 
             if (HighLogic.LoadedSceneIsEditor)
@@ -150,17 +156,18 @@ namespace Dynamic_Controls
 
         public override void OnSave(ConfigNode node)
         {
+            if (farValToSet == null)
+                return;
             try
             {
-                base.OnSave(node);
-                if (deflectionAtPressure == null)
-                    return;
-
                 node = EditorWindow.toConfigNode(deflectionAtPressure, node, false, deflection);
+                base.OnSave(node);
             }
-            catch
+            catch (Exception ex)
             {
                 Log("Onsave failed");
+                Log(ex.InnerException);
+                Log(ex.StackTrace);
             }
         }
 
@@ -184,7 +191,11 @@ namespace Dynamic_Controls
 
             string s = "";
             foreach (object o in toLog)
+            {
+                if (o == null)
+                    continue;
                 s += o.ToString() + "\r\n";
+            }
             Debug.Log(s);
 
             toLog.Clear();
