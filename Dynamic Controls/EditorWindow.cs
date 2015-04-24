@@ -19,6 +19,9 @@ namespace Dynamic_Controls
 
         public static Rect windowRect = new Rect(300, 300, 0, 0);
 
+        Display display;
+        bool showDisplay = false;
+
         public void Awake()
         {
             ModuleDynamicDeflection.defaults = GameDatabase.Instance.GetConfigNodes(nodeName).FirstOrDefault();
@@ -31,13 +34,30 @@ namespace Dynamic_Controls
             Instance = this;
 
             moduleToDraw = null;
+
+            display = new Display(200, 200);
         }
 
+        int maxX, maxY;
         public void Update()
         {
             if (!(HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneIsEditor) || moduleToDraw == null)
                 return;
             moduleToDraw.deflectionAtPressure.RemoveAll(l => l[0] < 0 || l[1] < 0); // set less than zero to remove from list
+            maxX = (int)(getMaxX(moduleToDraw.deflectionAtPressure) + 10);
+            maxY = (int)Math.Min((getMaxY(moduleToDraw.deflectionAtPressure) + 10), 150);
+            if (showDisplay)
+            {
+                if (HighLogic.LoadedSceneIsEditor)
+                    display.drawPoints(moduleToDraw.deflectionAtPressure, maxX, maxY, false);
+                else if (HighLogic.LoadedSceneIsFlight)
+                {
+                    List<List<float>> listToDraw = new List<List<float>>(moduleToDraw.deflectionAtPressure);
+                    listToDraw.Add(new List<float>() { moduleToDraw.Q, 100 * moduleToDraw.currentDeflection / moduleToDraw.deflection });
+                    display.drawPoints(listToDraw, maxX, maxY, true);
+                }
+            }
+
             if (Input.GetMouseButtonDown(0))
             {
                 Vector2 mouse = Input.mousePosition;
@@ -163,6 +183,14 @@ namespace Dynamic_Controls
                 windowRect.height = 0;
             }
             GUILayout.EndHorizontal();
+            if (GUILayout.Button("", GUILayout.Height(10)))
+            {
+                showDisplay = !showDisplay;
+                windowRect.height = 0;
+            }
+            if (showDisplay)
+                GUILayout.Label(display.Image);
+
             GUI.DragWindow();
         }
 
@@ -175,7 +203,7 @@ namespace Dynamic_Controls
                     if (p == null)
                         continue;
                     if (p.Modules.Contains("ModuleDynamicDeflection"))
-                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure, moduleToDraw.deflection);
+                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure);
                 }
             }
             else
@@ -185,14 +213,13 @@ namespace Dynamic_Controls
                     if (p == null)
                         continue;
                     if (p.Modules.Contains("ModuleDynamicDeflection"))
-                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure, moduleToDraw.deflection);
+                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure);
                 }
             }
         }
 
-        public static void copyToModule(ModuleDynamicDeflection m, List<List<float>> list, float maxDeflect)
+        public static void copyToModule(ModuleDynamicDeflection m, List<List<float>> list)
         {
-            m.deflection = maxDeflect;
             m.deflectionAtPressure = new List<List<float>>();
             foreach (List<float> kvp in list)
                 m.deflectionAtPressure.Add(new List<float>(kvp));
@@ -223,6 +250,28 @@ namespace Dynamic_Controls
                 node.AddValue("key", l[0].ToString() + "," + l[1].ToString());
             }
             return node;
+        }
+
+        public float getMaxX(List<List<float>> list)
+        {
+            float max = list[0][0];
+            for (int i = 1; i < list.Count; i++)
+            {
+                if (max < list[i][0])
+                    max = list[i][0];
+            }
+            return max;
+        }
+
+        public float getMaxY(List<List<float>> list)
+        {
+            float max = list[0][1];
+            for (int i = 1; i < list.Count; i++)
+            {
+                if (max < list[i][1])
+                    max = list[i][1];
+            }
+            return max;
         }
     }
 }

@@ -78,7 +78,6 @@ namespace Dynamic_Controls
 
             if (deflectionAtPressure == null)
             {
-                StartCoroutine(InitDeflection());
                 deflectionAtPressure = new List<List<float>>();
 
                 if (defaults == null)
@@ -87,32 +86,23 @@ namespace Dynamic_Controls
             }
         }
 
-        IEnumerator InitDeflection()
-        {
-            yield return null;
-            if (usingFAR)
-                deflection = (float)farValToSet.GetValue(module);
-            else
-                deflection = (module as ModuleControlSurface).ctrlSurfaceRange;
-        }
-
         public void Update()
         {
-            if (EditorWindow.Instance.moduleToDraw != this)
-                return;
-
-            foreach (Part p in part.symmetryCounterparts)
-            {
-                if (p != null)
-                    EditorWindow.copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, deflectionAtPressure, deflection);
-            }
-
             if (HighLogic.LoadedSceneIsEditor)
             {
                 if (usingFAR)
                     deflection = (float)farValToSet.GetValue(module);
                 else
                     deflection = (module as ModuleControlSurface).ctrlSurfaceRange;
+            }
+
+            if (EditorWindow.Instance.moduleToDraw != this)
+                return;
+
+            foreach (Part p in part.symmetryCounterparts)
+            {
+                if (p != null)
+                    EditorWindow.copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, deflectionAtPressure);
             }
         }
 
@@ -122,25 +112,8 @@ namespace Dynamic_Controls
                 return;
 
             Q = getQ(); // kPa
-            List<float> minLerp = null, maxLerp = null;
-            foreach (List<float> x in deflectionAtPressure)
-            {
-                if (x[0] < Q)
-                    minLerp = x;
-                else
-                {
-                    maxLerp = x;
-                    break;
-                }
-            }
-            if (minLerp == null)
-                currentDeflection = maxLerp[1] * deflection / 100; // dynamic pressure less than first checkpoint
-            else if (maxLerp == null)
-                currentDeflection = minLerp[1] * deflection / 100; // dynamic pressure more than last checkpoint
-            else
-                currentDeflection = (minLerp[1] + (Q - minLerp[0]) / (maxLerp[0] - minLerp[0]) * (maxLerp[1] - minLerp[1])) * deflection / 100;
 
-            currentDeflection = Mathf.Clamp(currentDeflection, 0.01f, 89);
+            currentDeflection = Mathf.Clamp(Evaluate(deflectionAtPressure, Q, deflection), 0.01f, 89);
 
             if (usingFAR)
                 farValToSet.SetValue(module, currentDeflection);
@@ -227,6 +200,29 @@ namespace Dynamic_Controls
                 pressure = (pressure - currentBodyAtmPressureOffset) * 101.3;     //Need to convert atm to kPa
 
             return pressure / (temp * 287);
+        }
+
+        public float Evaluate(List<List<float>> listToEvaluate, float x, float max)
+        {
+            List<float> minLerp = null, maxLerp = null;
+            foreach (List<float> l in listToEvaluate)
+            {
+                if (l[0] < x)
+                    minLerp = l;
+                else
+                {
+                    maxLerp = l;
+                    break;
+                }
+            }
+            float y = 0;
+            if (minLerp == null)
+                y = maxLerp[1] * max / 100; // dynamic pressure less than first checkpoint
+            else if (maxLerp == null)
+                y = minLerp[1] * max / 100; // dynamic pressure more than last checkpoint
+            else
+                y = (minLerp[1] + (x - minLerp[0]) / (maxLerp[0] - minLerp[0]) * (maxLerp[1] - minLerp[1])) * max / 100;
+            return y;
         }
     }
 }
