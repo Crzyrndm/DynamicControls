@@ -36,7 +36,7 @@ namespace Dynamic_Controls
 
             moduleToDraw = null;
 
-            display = new Display(200, 200);
+            display = new Display(160, 200);
             StartCoroutine(slowUpdate());
         }
 
@@ -215,7 +215,26 @@ namespace Dynamic_Controls
                 windowRect.height = 0;
             }
             if (showDisplay)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.BeginVertical();
+                GUILayout.Label(maxY.ToString());
+                GUILayout.Space(67);
+                GUILayout.Label(" %");
+                GUILayout.Space(67);
+                GUILayout.Label("0");
+                GUILayout.EndVertical();
                 GUILayout.Label(display.Image);
+                GUILayout.EndHorizontal();
+                GUILayout.BeginHorizontal();
+                GUILayout.Space(30);
+                GUILayout.Label("0");
+                GUILayout.Space(47);
+                GUILayout.Label("Q");
+                GUILayout.Space(47);
+                GUILayout.Label(maxX.ToString());
+                GUILayout.EndHorizontal();
+            }
 
             GUI.DragWindow();
         }
