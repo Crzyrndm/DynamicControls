@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using UnityEngine;
 
@@ -36,6 +37,7 @@ namespace Dynamic_Controls
             moduleToDraw = null;
 
             display = new Display(200, 200);
+            StartCoroutine(slowUpdate());
         }
 
         int maxX, maxY;
@@ -43,21 +45,7 @@ namespace Dynamic_Controls
         {
             if (!(HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneIsEditor) || moduleToDraw == null)
                 return;
-            moduleToDraw.deflectionAtPressure.RemoveAll(l => l[0] < 0 || l[1] < 0); // set less than zero to remove from list
-            maxX = (int)(getMaxX(moduleToDraw.deflectionAtPressure) + 10);
-            maxY = (int)Math.Min((getMaxY(moduleToDraw.deflectionAtPressure) + 10), 150);
-            if (showDisplay)
-            {
-                if (HighLogic.LoadedSceneIsEditor)
-                    display.drawPoints(moduleToDraw.deflectionAtPressure, maxX, maxY, false);
-                else if (HighLogic.LoadedSceneIsFlight)
-                {
-                    List<List<float>> listToDraw = new List<List<float>>(moduleToDraw.deflectionAtPressure);
-                    listToDraw.Add(new List<float>() { moduleToDraw.Q, 100 * moduleToDraw.currentDeflection / moduleToDraw.deflection });
-                    display.drawPoints(listToDraw, maxX, maxY, true);
-                }
-            }
-
+            
             if (Input.GetMouseButtonDown(0))
             {
                 Vector2 mouse = Input.mousePosition;
@@ -70,13 +58,51 @@ namespace Dynamic_Controls
             }
         }
 
+        IEnumerator slowUpdate()
+        {
+            while (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
+            {
+                for (int i = 0; i < 5; i ++)
+                    yield return 5;
+
+                if (moduleToDraw == null)
+                    continue;
+
+                moduleToDraw.deflectionAtPressure.RemoveAll(l => l[0] < 0 || l[1] < 0); // set less than zero to remove from list
+                maxX = (int)(getMaxX(moduleToDraw.deflectionAtPressure) + 10);
+                maxY = (int)Math.Min((getMaxY(moduleToDraw.deflectionAtPressure) + 10), 150);
+                if (showDisplay)
+                {
+                    if (HighLogic.LoadedSceneIsEditor)
+                        display.drawPoints(moduleToDraw.deflectionAtPressure, maxX, maxY, false);
+                    else if (HighLogic.LoadedSceneIsFlight)
+                    {
+                        List<List<float>> listToDraw = new List<List<float>>(moduleToDraw.deflectionAtPressure);
+                        listToDraw.Add(new List<float>() { moduleToDraw.Q, 100 * moduleToDraw.currentDeflection / moduleToDraw.deflection });
+                        display.drawPoints(listToDraw, maxX, maxY, true);
+                    }
+                }
+            }
+        }
+
         public void OnGUI()
         {
             if (!(HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneIsEditor))
                 return;
 
-            if (moduleToDraw != null)
-                windowRect = GUILayout.Window(7463908, windowRect, drawWindow, "");
+            if (moduleToDraw == null)
+                return;
+            
+            windowRect = GUILayout.Window(7463908, windowRect, drawWindow, "");
+            if (HighLogic.LoadedSceneIsEditor)
+            {
+                Vector2 mouse = Input.mousePosition;
+                mouse.y = Screen.height - mouse.y;
+                if (windowRect.Contains(mouse))
+                    EditorLogic.fetch.Lock(false, false, false, "DynamicDeflection");
+                else
+                    EditorLogic.fetch.Unlock("DynamicDeflection");
+            }
         }
 
         public void OnDestroy()
@@ -104,7 +130,7 @@ namespace Dynamic_Controls
 
             GUILayout.Label("100% deflection: " + moduleToDraw.deflection.ToString("0.#") + " degrees");
             if (HighLogic.LoadedSceneIsFlight)
-                GUILayout.Label("Deflect @ Q(" + moduleToDraw.Q.ToString("0.0") + ") = " + moduleToDraw.currentDeflection.ToString("0.0") + "(" + (moduleToDraw.currentDeflection * 100 / moduleToDraw.deflection).ToString("0.0") + "%)");
+                GUILayout.Label("Deflect @ Q(" + moduleToDraw.Q.ToString("0") + ") = " + moduleToDraw.currentDeflection.ToString("0.0") + "(" + (moduleToDraw.currentDeflection * 100 / moduleToDraw.deflection).ToString("0") + "%)");
             GUILayout.Box("", GUILayout.Height(10));
             GUILayout.BeginHorizontal();
             GUILayout.Space(77);

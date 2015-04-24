@@ -44,7 +44,7 @@ namespace Dynamic_Controls
                     {
                         if (yLoc + k < 0 || yLoc + k > displayTex.height)
                             continue;
-                        if (lastIsGreen && i != listToDraw.Count - 1)
+                        if (lastIsGreen && i == listToDraw.Count - 1)
                             displayTex.SetPixel(xLoc + j, yLoc + k, XKCDColors.Green);
                         else
                             displayTex.SetPixel(xLoc + j, yLoc + k, XKCDColors.Red);
