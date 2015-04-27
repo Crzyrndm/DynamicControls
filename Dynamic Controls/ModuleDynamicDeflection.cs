@@ -129,8 +129,6 @@ namespace Dynamic_Controls
 
         public override void OnSave(ConfigNode node)
         {
-            if (farValToSet == null)
-                return;
             try
             {
                 node = EditorWindow.toConfigNode(deflectionAtPressure, node, false, deflection);
@@ -177,30 +175,30 @@ namespace Dynamic_Controls
 
         private float getQ() // roughly. no compensation for mach or temperature
         {
-            if (usingFAR)
-                return (float)(getCurrentDensity() * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5);
-            else
-                return (float)(FlightGlobals.getAtmDensity(FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody)) * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5) / 1000f;
+            //if (usingFAR)
+            //    return (float)(getCurrentDensity() * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5);
+            //else
+            return (float)(FlightGlobals.getAtmDensity(FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody), FlightGlobals.getExternalTemperature(vessel.altitude, vessel.mainBody)) * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5) / 1000f;
         }
 
         /// <summary>
         /// FAR rho calculation
         /// </summary>
         /// <returns></returns>
-        private double getCurrentDensity()
-        {
-            double altitude = vessel.mainBody.GetAltitude(part.transform.position);
-            double temp = Math.Max(0.1, 273.15 + FlightGlobals.getExternalTemperature((float)altitude, vessel.mainBody));
-            double currentBodyAtmPressureOffset = 0;
-            if (vessel.mainBody.useLegacyAtmosphere && vessel.mainBody.atmosphere)
-                currentBodyAtmPressureOffset = vessel.mainBody.atmosphereMultiplier * 1e-6;
+        //private double getCurrentDensity()
+        //{
+        //    double altitude = vessel.mainBody.GetAltitude(part.transform.position);
+        //    double temp = Math.Max(0.1, 273.15 + FlightGlobals.getExternalTemperature((float)altitude, vessel.mainBody));
+        //    double currentBodyAtmPressureOffset = 0;
+        //    if (vessel.mainBody.useLegacyAtmosphere && vessel.mainBody.atmosphere)
+        //        currentBodyAtmPressureOffset = vessel.mainBody.atmosphereMultiplier * 1e-6;
 
-            double pressure = FlightGlobals.getStaticPressure(part.transform.position, vessel.mainBody);
-            if (pressure > 0)
-                pressure = (pressure - currentBodyAtmPressureOffset) * 101.3;     //Need to convert atm to kPa
+        //    double pressure = FlightGlobals.getStaticPressure(part.transform.position, vessel.mainBody);
+        //    if (pressure > 0)
+        //        pressure = (pressure - currentBodyAtmPressureOffset) * 101.3;     //Need to convert atm to kPa
 
-            return pressure / (temp * 287);
-        }
+        //    return pressure / (temp * 287);
+        //}
 
         public float Evaluate(List<List<float>> listToEvaluate, float x, float max)
         {
