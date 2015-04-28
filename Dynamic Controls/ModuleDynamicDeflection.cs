@@ -94,7 +94,7 @@ namespace Dynamic_Controls
                 if (usingFAR)
                     deflection = (float)farValToSet.GetValue(module);
                 else
-                    deflection = (module as ModuleControlSurface).ctrlSurfaceRange;
+                    deflection = Math.Abs((module as ModuleControlSurface).ctrlSurfaceRange);
             }
 
             if (EditorWindow.Instance.moduleToDraw != this)
