@@ -40,6 +40,7 @@ namespace Dynamic_Controls
         public void LoadConfig(ConfigNode node, bool loadingDefaults = false)
         {
             float.TryParse(node.GetValue("deflection"), out deflection);
+            deflection = Math.Abs(deflection);
             deflectionAtPressure.Clear();
             foreach (string s in node.GetValues("key"))
             {
