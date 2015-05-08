@@ -78,7 +78,7 @@ namespace Dynamic_Controls
                     else if (HighLogic.LoadedSceneIsFlight)
                     {
                         List<List<float>> listToDraw = new List<List<float>>(moduleToDraw.deflectionAtPressure);
-                        listToDraw.Add(new List<float>() { moduleToDraw.Q, 100 * moduleToDraw.currentDeflection / moduleToDraw.deflection });
+                        listToDraw.Add(new List<float>() { (float)moduleToDraw.part.dynamicPressurekPa, 100 * moduleToDraw.currentDeflection / moduleToDraw.deflection });
                         display.drawPoints(listToDraw, maxX, maxY, true);
                     }
                 }
@@ -130,7 +130,7 @@ namespace Dynamic_Controls
 
             GUILayout.Label("100% deflection: " + moduleToDraw.deflection.ToString("0.#") + " degrees");
             if (HighLogic.LoadedSceneIsFlight)
-                GUILayout.Label("Deflect @ Q(" + moduleToDraw.Q.ToString("0") + ") = " + moduleToDraw.currentDeflection.ToString("0.0") + "(" + (moduleToDraw.currentDeflection * 100 / moduleToDraw.deflection).ToString("0") + "%)");
+                GUILayout.Label("Deflect @ Q(" + moduleToDraw.part.dynamicPressurekPa.ToString("0") + ") = " + moduleToDraw.currentDeflection.ToString("0.0") + "(" + (moduleToDraw.currentDeflection * 100 / moduleToDraw.deflection).ToString("0") + "%)");
             GUILayout.Box("", GUILayout.Height(10));
             GUILayout.BeginHorizontal();
             GUILayout.Space(77);

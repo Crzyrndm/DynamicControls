@@ -19,7 +19,7 @@ namespace Dynamic_Controls
 
         public float deflection;
         public float currentDeflection;
-        public float Q;
+        bool loaded = false;
 
         public override void OnLoad(ConfigNode node) // dynamic deflection node with actions and events subnodes
         {
@@ -28,6 +28,7 @@ namespace Dynamic_Controls
                 if (deflectionAtPressure == null)
                     deflectionAtPressure = new List<List<float>>();
                 LoadConfig(node);
+                loaded = true;
             }
             catch (Exception ex)
             {
@@ -39,7 +40,8 @@ namespace Dynamic_Controls
 
         public void LoadConfig(ConfigNode node, bool loadingDefaults = false)
         {
-            float.TryParse(node.GetValue("deflection"), out deflection);
+            if (node.HasValue("deflection"))
+                float.TryParse(node.GetValue("deflection"), out deflection);
             deflection = Math.Abs(deflection);
             deflectionAtPressure.Clear();
             foreach (string s in node.GetValues("key"))
@@ -85,6 +87,14 @@ namespace Dynamic_Controls
                     defaults = new ConfigNode(EditorWindow.nodeName);
                 LoadConfig(defaults, true);
             }
+
+            if (!loaded)
+            {
+                if (usingFAR)
+                    deflection = (float)farValToSet.GetValue(module);
+                else
+                    deflection = Math.Abs((module as ModuleControlSurface).ctrlSurfaceRange);
+            }
         }
 
         public void Update()
@@ -112,14 +122,12 @@ namespace Dynamic_Controls
             if (!HighLogic.LoadedSceneIsFlight)
                 return;
 
-            Q = getQ(); // kPa
-
-            currentDeflection = Mathf.Clamp(Evaluate(deflectionAtPressure, Q, deflection), 0.01f, 89);
+            currentDeflection = Mathf.Clamp(Evaluate(deflectionAtPressure, (float)part.dynamicPressurekPa, deflection), 0.01f, 89);
 
             if (usingFAR)
                 farValToSet.SetValue(module, currentDeflection);
             else
-                (module as ModuleControlSurface).ctrlSurfaceRange = currentDeflection;
+                ((ModuleControlSurface)module).ctrlSurfaceRange = currentDeflection;
         }
 
         private void OnMouseOver()
