@@ -94,6 +94,7 @@ namespace Dynamic_Controls
                     deflection = (float)farValToSet.GetValue(module);
                 else
                     deflection = Math.Abs((module as ModuleControlSurface).ctrlSurfaceRange);
+                loaded = true;
             }
         }
 
@@ -138,6 +139,8 @@ namespace Dynamic_Controls
 
         public override void OnSave(ConfigNode node)
         {
+            if (!loaded)
+                return;
             try
             {
                 node = EditorWindow.toConfigNode(deflectionAtPressure, node, false, deflection);
