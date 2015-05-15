@@ -123,6 +123,12 @@ namespace Dynamic_Controls
             if (!HighLogic.LoadedSceneIsFlight)
                 return;
 
+            //Debug.Log("nullChecks");
+            //Debug.Log(deflectionAtPressure);
+            //Debug.Log(vessel.dynamicPressurekPa);
+            //Debug.Log(deflection);
+            //Debug.Log(farValToSet);
+
             currentDeflection = Mathf.Clamp(Evaluate(deflectionAtPressure, (float)vessel.dynamicPressurekPa, deflection), 0.01f, 89);
 
             if (usingFAR)
