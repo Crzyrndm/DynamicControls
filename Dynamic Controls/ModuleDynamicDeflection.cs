@@ -69,8 +69,7 @@ namespace Dynamic_Controls
 
         public void Start()
         {
-            usingFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name.Equals("FerramAerospaceResearch", StringComparison.InvariantCultureIgnoreCase)
-                                                                || a.assembly.GetName().Name.Equals("NEAR", StringComparison.InvariantCultureIgnoreCase));
+            usingFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name.Equals("FerramAerospaceResearch", StringComparison.InvariantCultureIgnoreCase));
             if (part.Modules.Contains("FARControllableSurface"))
                 module = part.Modules["FARControllableSurface"];
             else if (part.Modules.Contains("ModuleControlSurface"))
@@ -122,12 +121,6 @@ namespace Dynamic_Controls
         {
             if (!HighLogic.LoadedSceneIsFlight)
                 return;
-
-            //Debug.Log("nullChecks");
-            //Debug.Log(deflectionAtPressure);
-            //Debug.Log(vessel.dynamicPressurekPa);
-            //Debug.Log(deflection);
-            //Debug.Log(farValToSet);
 
             currentDeflection = Mathf.Clamp(Evaluate(deflectionAtPressure, (float)vessel.dynamicPressurekPa, deflection), 0.01f, 89);
 
