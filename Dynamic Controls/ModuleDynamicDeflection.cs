@@ -17,7 +17,14 @@ namespace Dynamic_Controls
         private PartModule module;
         private FieldInfo farValToSet;
 
+        /// <summary>
+        /// The 100% deflection level
+        /// </summary>
         public float deflection;
+
+        /// <summary>
+        /// The current max delfection angle
+        /// </summary>
         public float currentDeflection;
         bool loaded = false;
 
@@ -72,8 +79,8 @@ namespace Dynamic_Controls
             usingFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name.Equals("FerramAerospaceResearch", StringComparison.InvariantCultureIgnoreCase));
             if (part.Modules.Contains("FARControllableSurface"))
                 module = part.Modules["FARControllableSurface"];
-            else if (part.Modules.Contains("ModuleControlSurface"))
-                module = part.Modules["ModuleControlSurface"];
+            else if (part.Modules.OfType<ModuleControlSurface>().Any())
+                module = part.Modules.OfType<ModuleControlSurface>().FirstOrDefault();
 
             if (usingFAR)
                 farValToSet = module.GetType().GetField("maxdeflect");
@@ -104,7 +111,7 @@ namespace Dynamic_Controls
                 if (usingFAR)
                     deflection = (float)farValToSet.GetValue(module);
                 else
-                    deflection = Math.Abs((module as ModuleControlSurface).ctrlSurfaceRange);
+                    deflection = ((ModuleControlSurface)module).ctrlSurfaceRange;
             }
 
             if (EditorWindow.Instance.moduleToDraw != this)
@@ -184,7 +191,7 @@ namespace Dynamic_Controls
         }
         #endregion
 
-        private float getQ() // roughly. no compensation for mach or temperature
+        private float getQ()
         {
             //if (usingFAR)
             //    return (float)(getCurrentDensity() * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5);
@@ -214,21 +221,22 @@ namespace Dynamic_Controls
         public float Evaluate(List<List<float>> listToEvaluate, float x, float max)
         {
             List<float> minLerp = null, maxLerp = null;
-            foreach (List<float> l in listToEvaluate)
+            for (int i = 0; i < listToEvaluate.Count; i++)
             {
-                if (l[0] < x)
-                    minLerp = l;
+                List<float> kvp = listToEvaluate[i];
+                if (kvp[0] < x)
+                    minLerp = kvp;
                 else
                 {
-                    maxLerp = l;
+                    maxLerp = kvp;
                     break;
                 }
             }
             float y = 0;
             if (minLerp == null)
-                y = maxLerp[1] * max / 100; // dynamic pressure less than first checkpoint
+                y = maxLerp[1] * max / 100; // dynamic pressure below first checkpoint
             else if (maxLerp == null)
-                y = minLerp[1] * max / 100; // dynamic pressure more than last checkpoint
+                y = minLerp[1] * max / 100; // dynamic pressure above last checkpoint
             else
                 y = (minLerp[1] + (x - minLerp[0]) / (maxLerp[0] - minLerp[0]) * (maxLerp[1] - minLerp[1])) * max / 100;
             return y;

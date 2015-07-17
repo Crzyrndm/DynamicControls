@@ -63,7 +63,7 @@ namespace Dynamic_Controls
             while (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
             {
                 for (int i = 0; i < 5; i ++)
-                    yield return 5;
+                    yield return null;
 
                 if (moduleToDraw == null)
                     continue;
@@ -128,9 +128,9 @@ namespace Dynamic_Controls
             if (moduleToDraw.deflectionAtPressure == null)
                 moduleToDraw.deflectionAtPressure = new List<List<float>>();
 
-            GUILayout.Label("100% deflection: " + moduleToDraw.deflection.ToString("0.#") + " degrees");
+            GUILayout.Label("100% deflection: " + (moduleToDraw.deflection < 0 ? -1 * moduleToDraw.deflection : moduleToDraw.deflection).ToString("0.#") + " degrees");
             if (HighLogic.LoadedSceneIsFlight)
-                GUILayout.Label("Deflect @ Q(" + moduleToDraw.vessel.dynamicPressurekPa.ToString("0") + ") = " + moduleToDraw.currentDeflection.ToString("0.0") + "(" + (moduleToDraw.currentDeflection * 100 / moduleToDraw.deflection).ToString("0") + "%)");
+                GUILayout.Label("Deflect @ Q(" + moduleToDraw.vessel.dynamicPressurekPa.ToString("0") + ") = " + (moduleToDraw.currentDeflection < 0 ? -1 * moduleToDraw.currentDeflection : moduleToDraw.currentDeflection).ToString("0.0") + "(" + (moduleToDraw.currentDeflection * 100 / moduleToDraw.deflection).ToString("0") + "%)");
             GUILayout.Box("", GUILayout.Height(10));
             GUILayout.BeginHorizontal();
             GUILayout.Space(77);
