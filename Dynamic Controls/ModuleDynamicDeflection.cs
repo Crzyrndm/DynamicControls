@@ -49,7 +49,6 @@ namespace Dynamic_Controls
         {
             if (node.HasValue("deflection"))
                 float.TryParse(node.GetValue("deflection"), out deflection);
-            deflection = Math.Abs(deflection);
             deflectionAtPressure.Clear();
             foreach (string s in node.GetValues("key"))
             {
@@ -99,7 +98,7 @@ namespace Dynamic_Controls
                 if (usingFAR)
                     deflection = (float)farValToSet.GetValue(module);
                 else
-                    deflection = Math.Abs((module as ModuleControlSurface).ctrlSurfaceRange);
+                    deflection = ((ModuleControlSurface)module).ctrlSurfaceRange;
                 loaded = true;
             }
         }
@@ -129,7 +128,7 @@ namespace Dynamic_Controls
             if (!HighLogic.LoadedSceneIsFlight)
                 return;
 
-            currentDeflection = Mathf.Clamp(Evaluate(deflectionAtPressure, (float)vessel.dynamicPressurekPa, deflection), 0.01f, 89);
+            currentDeflection = Mathf.Clamp(Evaluate(deflectionAtPressure, (float)vessel.dynamicPressurekPa) * deflection, -89, 89);
 
             if (usingFAR)
                 farValToSet.SetValue(module, currentDeflection);
@@ -191,13 +190,13 @@ namespace Dynamic_Controls
         }
         #endregion
 
-        private float getQ()
-        {
-            //if (usingFAR)
-            //    return (float)(getCurrentDensity() * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5);
-            //else
-            return (float)(FlightGlobals.getAtmDensity(FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody), FlightGlobals.getExternalTemperature(vessel.altitude, vessel.mainBody)) * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5) / 1000f;
-        }
+        //private float getQ()
+        //{
+        //    //if (usingFAR)
+        //    //    return (float)(getCurrentDensity() * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5);
+        //    //else
+        //    return (float)(FlightGlobals.getAtmDensity(FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody), FlightGlobals.getExternalTemperature(vessel.altitude, vessel.mainBody)) * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5) / 1000f;
+        //}
 
         /// <summary>
         /// FAR rho calculation
@@ -218,7 +217,13 @@ namespace Dynamic_Controls
         //    return pressure / (temp * 287);
         //}
 
-        public float Evaluate(List<List<float>> listToEvaluate, float x, float max)
+        /// <summary>
+        /// Linear interpolation between points
+        /// </summary>
+        /// <param name="listToEvaluate">List of (x,y) pairs to interpolate between</param>
+        /// <param name="x">the x-value to interpolate to</param>
+        /// <returns>the fraction the value interpolates to</returns>
+        public float Evaluate(List<List<float>> listToEvaluate, float x)
         {
             List<float> minLerp = null, maxLerp = null;
             for (int i = 0; i < listToEvaluate.Count; i++)
@@ -234,11 +239,11 @@ namespace Dynamic_Controls
             }
             float y = 0;
             if (minLerp == null)
-                y = maxLerp[1] * max / 100; // dynamic pressure below first checkpoint
+                y = maxLerp[1] / 100; // dynamic pressure below first checkpoint
             else if (maxLerp == null)
-                y = minLerp[1] * max / 100; // dynamic pressure above last checkpoint
+                y = minLerp[1] / 100; // dynamic pressure above last checkpoint
             else
-                y = (minLerp[1] + (x - minLerp[0]) / (maxLerp[0] - minLerp[0]) * (maxLerp[1] - minLerp[1])) * max / 100;
+                y = (minLerp[1] + (x - minLerp[0]) / (maxLerp[0] - minLerp[0]) * (maxLerp[1] - minLerp[1])) / 100;
             return y;
         }
     }
