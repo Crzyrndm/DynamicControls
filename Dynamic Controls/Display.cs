@@ -33,17 +33,13 @@ namespace Dynamic_Controls
             for (int i = 0; i < listToDraw.Count; i++)
             {
                 List<float> l = listToDraw[i];
-                int xLoc = (int)Mathf.Clamp(l[0] * displayTex.width / x_max, 0, displayTex.width);
-                int yLoc = (int)Mathf.Clamp(l[1] * displayTex.height / y_max, 0, displayTex.height);
+                int xLoc = (int)Mathf.Clamp(l[0] * displayTex.width / x_max, 2, displayTex.width - 3);
+                int yLoc = (int)Mathf.Clamp(l[1] * displayTex.height / y_max, 2, displayTex.height - 3);
 
                 for (int j = -2; j <= 2; j++)
                 {
-                    if (xLoc + j < 0 || xLoc + j > displayTex.width)
-                        continue;
                     for (int k = -2; k <= 2; k++)
                     {
-                        if (yLoc + k < 0 || yLoc + k > displayTex.height)
-                            continue;
                         if (lastIsGreen && i == listToDraw.Count - 1)
                             displayTex.SetPixel(xLoc + j, yLoc + k, XKCDColors.Green);
                         else
