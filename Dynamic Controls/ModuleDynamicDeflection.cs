@@ -201,6 +201,8 @@ namespace Dynamic_Controls
         {
             float val;
             int minLerpIndex = 0, maxLerpIndex = listToEvaluate.Count - 1;
+            if (listToEvaluate[listToEvaluate.Count - 2][0] > listToEvaluate[maxLerpIndex][0]) // the last value may be a freshly added value. Can ignore in that case
+                --maxLerpIndex;
 
             if (x < lastHigh && x > lastLow)
                 val = lowVal + (highVal - lowVal) * (x - lastLow) / (lastHigh - lastLow);
