@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
@@ -125,7 +125,7 @@ namespace Dynamic_Controls
 
         public void FixedUpdate()
         {
-            if (!HighLogic.LoadedSceneIsFlight)
+            if (!HighLogic.LoadedSceneIsFlight || vessel.HoldPhysics)
                 return;
 
             currentDeflection = Mathf.Clamp(Evaluate(deflectionAtPressure, (float)vessel.dynamicPressurekPa) * deflection, -89, 89);
@@ -190,33 +190,6 @@ namespace Dynamic_Controls
         }
         #endregion
 
-        //private float getQ()
-        //{
-        //    //if (usingFAR)
-        //    //    return (float)(getCurrentDensity() * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5);
-        //    //else
-        //    return (float)(FlightGlobals.getAtmDensity(FlightGlobals.getStaticPressure(vessel.altitude, vessel.mainBody), FlightGlobals.getExternalTemperature(vessel.altitude, vessel.mainBody)) * vessel.srf_velocity.magnitude * vessel.srf_velocity.magnitude * 0.5) / 1000f;
-        //}
-
-        /// <summary>
-        /// FAR rho calculation
-        /// </summary>
-        /// <returns></returns>
-        //private double getCurrentDensity()
-        //{
-        //    double altitude = vessel.mainBody.GetAltitude(part.transform.position);
-        //    double temp = Math.Max(0.1, 273.15 + FlightGlobals.getExternalTemperature((float)altitude, vessel.mainBody));
-        //    double currentBodyAtmPressureOffset = 0;
-        //    if (vessel.mainBody.useLegacyAtmosphere && vessel.mainBody.atmosphere)
-        //        currentBodyAtmPressureOffset = vessel.mainBody.atmosphereMultiplier * 1e-6;
-
-        //    double pressure = FlightGlobals.getStaticPressure(part.transform.position, vessel.mainBody);
-        //    if (pressure > 0)
-        //        pressure = (pressure - currentBodyAtmPressureOffset) * 101.3;     //Need to convert atm to kPa
-
-        //    return pressure / (temp * 287);
-        //}
-
         /// <summary>
         /// Linear interpolation between points
         /// </summary>
@@ -225,26 +198,26 @@ namespace Dynamic_Controls
         /// <returns>the fraction the value interpolates to</returns>
         public float Evaluate(List<List<float>> listToEvaluate, float x)
         {
-            List<float> minLerp = null, maxLerp = null;
-            for (int i = 0; i < listToEvaluate.Count; i++)
+            float val;
+            int minLerpIndex = 0, maxLerpIndex = listToEvaluate.Count - 1;
+
+            if (x < listToEvaluate[0][0]) // clamp to minimum dyn pressure on the list
+                val = listToEvaluate[0][1];
+            else if (x > listToEvaluate[maxLerpIndex][0]) // clamp to max dyn pressure on the list
+                val = listToEvaluate[maxLerpIndex][1];
+            else // binary search the list
             {
-                List<float> kvp = listToEvaluate[i];
-                if (kvp[0] < x)
-                    minLerp = kvp;
-                else
+                while (minLerpIndex < maxLerpIndex - 1)
                 {
-                    maxLerp = kvp;
-                    break;
+                    int midIndex = minLerpIndex + (maxLerpIndex - minLerpIndex) / 2;
+                    if (listToEvaluate[midIndex][0] > x)
+                        maxLerpIndex = midIndex;
+                    else
+                        minLerpIndex = midIndex;
                 }
+                val = listToEvaluate[minLerpIndex][1] + (x - listToEvaluate[minLerpIndex][0]) / (listToEvaluate[maxLerpIndex][0] - listToEvaluate[minLerpIndex][0]) * (listToEvaluate[maxLerpIndex][1] - listToEvaluate[minLerpIndex][1]);
             }
-            float y = 0;
-            if (minLerp == null)
-                y = maxLerp[1] / 100; // dynamic pressure below first checkpoint
-            else if (maxLerp == null)
-                y = minLerp[1] / 100; // dynamic pressure above last checkpoint
-            else
-                y = (minLerp[1] + (x - minLerp[0]) / (maxLerp[0] - minLerp[0]) * (maxLerp[1] - minLerp[1])) / 100;
-            return y;
+            return val / 100;
         }
     }
 }

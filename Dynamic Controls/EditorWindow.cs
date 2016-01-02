@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
@@ -45,7 +45,7 @@ namespace Dynamic_Controls
         {
             if (!(HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneIsEditor) || moduleToDraw == null)
                 return;
-            
+
             if (Input.GetMouseButtonDown(0))
             {
                 Vector2 mouse = Input.mousePosition;
@@ -62,7 +62,7 @@ namespace Dynamic_Controls
         {
             while (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
             {
-                for (int i = 0; i < 30; i ++)
+                for (int i = 0; i < 30; i++)
                     yield return null;
 
                 if (moduleToDraw == null)
@@ -92,7 +92,7 @@ namespace Dynamic_Controls
 
             if (moduleToDraw == null)
                 return;
-            
+
             windowRect = GUILayout.Window(7463908, windowRect, drawWindow, "");
             if (HighLogic.LoadedSceneIsEditor)
             {
@@ -167,7 +167,7 @@ namespace Dynamic_Controls
                     GUILayout.Space(70);
                     GUI.SetNextControlName("dynPress");
                     dynPressure = GUILayout.TextField(dynPressure, GUILayout.Width(60));
-                    
+
                     deflection = GUILayout.TextField(deflection, GUILayout.Width(60));
                     GUILayout.EndHorizontal();
                     if (focus == 0)
