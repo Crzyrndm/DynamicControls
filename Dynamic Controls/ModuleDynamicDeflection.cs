@@ -190,6 +190,7 @@ namespace Dynamic_Controls
         }
         #endregion
 
+        float lastLow = -1, lastHigh = -1, lowVal, highVal;
         /// <summary>
         /// Linear interpolation between points
         /// </summary>
@@ -201,7 +202,9 @@ namespace Dynamic_Controls
             float val;
             int minLerpIndex = 0, maxLerpIndex = listToEvaluate.Count - 1;
 
-            if (x < listToEvaluate[0][0]) // clamp to minimum dyn pressure on the list
+            if (x < lastHigh && x > lastLow)
+                val = lowVal + (highVal - lowVal) * (x - lastLow) / (lastHigh - lastLow);
+            else if (x < listToEvaluate[0][0]) // clamp to minimum dyn pressure on the list
                 val = listToEvaluate[0][1];
             else if (x > listToEvaluate[maxLerpIndex][0]) // clamp to max dyn pressure on the list
                 val = listToEvaluate[maxLerpIndex][1];
@@ -216,6 +219,10 @@ namespace Dynamic_Controls
                         minLerpIndex = midIndex;
                 }
                 val = listToEvaluate[minLerpIndex][1] + (x - listToEvaluate[minLerpIndex][0]) / (listToEvaluate[maxLerpIndex][0] - listToEvaluate[minLerpIndex][0]) * (listToEvaluate[maxLerpIndex][1] - listToEvaluate[minLerpIndex][1]);
+                lastHigh = listToEvaluate[maxLerpIndex][0];
+                highVal = listToEvaluate[maxLerpIndex][1];
+                lastLow = listToEvaluate[minLerpIndex][0];
+                lowVal = listToEvaluate[minLerpIndex][1];
             }
             return val / 100;
         }
