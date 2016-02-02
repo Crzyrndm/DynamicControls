@@ -1,15 +1,13 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Collections;
 using System.Linq;
 using UnityEngine;
-using System.Reflection;
 
 namespace Dynamic_Controls
 {
-    public class ModuleDynamicDeflection : DynamicModule
+    class ModuleDynamicGimbal : DynamicModule
     {
-        private bool usingFAR;
+        ModuleEngines engine;
 
         public static ConfigNode defaults;
         public override ConfigNode defaultSetup
@@ -18,29 +16,20 @@ namespace Dynamic_Controls
             set { defaults = value; }
         }
 
-        private FieldInfo farValToSet;
-
         public override string nodeName
         {
-            get { return "DynamicDeflection"; }
+            get { return "DynamicGimbal"; }
         }
-
         public void Awake()
         {
             if (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
-                ModuleDynamicDeflection.defaults = GameDatabase.Instance.GetConfigNodes(nodeName).FirstOrDefault();
+                ModuleDynamicGimbal.defaults = GameDatabase.Instance.GetConfigNodes(nodeName).FirstOrDefault();
         }
 
         public void Start()
         {
-            usingFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name.Equals("FerramAerospaceResearch", StringComparison.InvariantCultureIgnoreCase));
-            if (part.Modules.Contains("FARControllableSurface"))
-                module = part.Modules["FARControllableSurface"];
-            else
-                module = part.Modules.OfType<ModuleControlSurface>().FirstOrDefault();
-
-            if (usingFAR)
-                farValToSet = module.GetType().GetField("maxdeflect");
+            module = part.Modules.OfType<ModuleGimbal>().FirstOrDefault();
+            engine = part.Modules.OfType<ModuleEngines>().FirstOrDefault();
 
             if (deflectionAtValue == null)
             {
@@ -53,10 +42,7 @@ namespace Dynamic_Controls
 
             if (!loaded)
             {
-                if (usingFAR)
-                    deflection = (float)farValToSet.GetValue(module);
-                else
-                    deflection = ((ModuleControlSurface)module).ctrlSurfaceRange;
+                deflection = ((ModuleGimbal)module).gimbalRange;
                 loaded = true;
             }
         }
@@ -64,12 +50,7 @@ namespace Dynamic_Controls
         public void Update()
         {
             if (HighLogic.LoadedSceneIsEditor)
-            {
-                if (usingFAR)
-                    deflection = (float)farValToSet.GetValue(module);
-                else
-                    deflection = ((ModuleControlSurface)module).ctrlSurfaceRange;
-            }
+                deflection = ((ModuleGimbal)module).gimbalRange;
 
             if (windowInstance.moduleToDraw != this)
                 return;
@@ -77,7 +58,7 @@ namespace Dynamic_Controls
             foreach (Part p in part.symmetryCounterparts)
             {
                 if (p != null)
-                    copyToModule(p.Modules.OfType<ModuleDynamicDeflection>().FirstOrDefault(), deflectionAtValue);
+                    copyToModule(p.Modules.OfType<ModuleDynamicGimbal>().FirstOrDefault(), deflectionAtValue);
             }
         }
 
@@ -86,12 +67,9 @@ namespace Dynamic_Controls
             if (!HighLogic.LoadedSceneIsFlight || vessel.HoldPhysics)
                 return;
 
-            currentDeflection = Mathf.Clamp(Evaluate(deflectionAtValue, (float)vessel.dynamicPressurekPa) * deflection, -89, 89);
+            currentDeflection = Mathf.Clamp(Evaluate(deflectionAtValue, engine.GetCurrentThrust() / engine.maxThrust) * deflection, 0, 30);
 
-            if (usingFAR)
-                farValToSet.SetValue(module, currentDeflection);
-            else
-                ((ModuleControlSurface)module).ctrlSurfaceRange = currentDeflection;
+            ((ModuleGimbal)module).gimbalRange = currentDeflection;
         }
 
         public override void OnSave(ConfigNode node)
@@ -111,13 +89,13 @@ namespace Dynamic_Controls
             }
         }
 
-        // copy to every control surface on the vessel, not just the sym counterparts
+        // copy to every gimbal on the vessel, not just the sym counterparts
         public override void copyToAll()
         {
             foreach (Part p in (HighLogic.LoadedSceneIsEditor ? EditorLogic.fetch.getSortedShipList() : vessel.parts))
             {
-                if (p != null && p.Modules.Contains("ModuleDynamicDeflection"))
-                    copyToModule(p.Modules.OfType<ModuleDynamicDeflection>().FirstOrDefault(), deflectionAtValue);
+                if (p != null && p.Modules.Contains("ModuleDynamicGimbal"))
+                    copyToModule(p.Modules.OfType<ModuleDynamicGimbal>().FirstOrDefault(), deflectionAtValue);
             }
         }
 
