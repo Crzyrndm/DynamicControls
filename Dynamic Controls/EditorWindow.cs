@@ -6,11 +6,15 @@ using UnityEngine;
 
 namespace Dynamic_Controls
 {
-    public class EditorWindow : MonoBehaviour
+    [KSPAddon(KSPAddon.Startup.EveryScene, false)]
+    class EditorWindow : MonoBehaviour
     {
+        public static EditorWindow Instance { get; private set; }
+
+        public const string nodeName = "DynamicDeflection";
         const string savePath = "GameData/Dynamic Controls/Defaults.cfg";
 
-        public DynamicModule moduleToDraw;
+        public ModuleDynamicDeflection moduleToDraw;
         string dynPressure = "";
         string deflection = "";
 
@@ -20,10 +24,17 @@ namespace Dynamic_Controls
         Display display;
         bool showDisplay = false;
 
-        
+        public void Awake()
+        {
+            ModuleDynamicDeflection.defaults = GameDatabase.Instance.GetConfigNodes(nodeName).FirstOrDefault();
+        }
 
         public void Start()
         {
+            if (!(HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneIsEditor))
+                return;
+            Instance = this;
+
             moduleToDraw = null;
 
             display = new Display(160, 200);
@@ -32,7 +43,7 @@ namespace Dynamic_Controls
 
         public void Update()
         {
-            if (moduleToDraw == null)
+            if (!(HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneIsEditor) || moduleToDraw == null)
                 return;
 
             if (Input.GetMouseButtonDown(0))
@@ -41,7 +52,7 @@ namespace Dynamic_Controls
                 mouse.y = Screen.height - mouse.y;
                 if (!windowRect.Contains(mouse))
                 {
-                    moduleToDraw.deflectionAtValue = moduleToDraw.deflectionAtValue.OrderBy(x => x[0]).ToList();
+                    moduleToDraw.deflectionAtPressure = moduleToDraw.deflectionAtPressure.OrderBy(x => x[0]).ToList();
                     moduleToDraw = null;
                 }
             }
@@ -57,16 +68,16 @@ namespace Dynamic_Controls
                 if (moduleToDraw == null)
                     continue;
 
-                moduleToDraw.deflectionAtValue.RemoveAll(l => l[0] < 0 || l[1] < 0); // set less than zero to remove from list
-                maxX = (int)(getMaxX(moduleToDraw.deflectionAtValue) + 10);
-                maxY = (int)Math.Min((getMaxY(moduleToDraw.deflectionAtValue) + 10), 150);
+                moduleToDraw.deflectionAtPressure.RemoveAll(l => l[0] < 0 || l[1] < 0); // set less than zero to remove from list
+                maxX = (int)(getMaxX(moduleToDraw.deflectionAtPressure) + 10);
+                maxY = (int)Math.Min((getMaxY(moduleToDraw.deflectionAtPressure) + 10), 150);
                 if (showDisplay)
                 {
                     if (HighLogic.LoadedSceneIsEditor)
-                        display.drawPoints(moduleToDraw.deflectionAtValue, maxX, maxY, false);
+                        display.drawPoints(moduleToDraw.deflectionAtPressure, maxX, maxY, false);
                     else if (HighLogic.LoadedSceneIsFlight)
                     {
-                        List<List<float>> listToDraw = new List<List<float>>(moduleToDraw.deflectionAtValue);
+                        List<List<float>> listToDraw = new List<List<float>>(moduleToDraw.deflectionAtPressure);
                         listToDraw.Add(new List<float>() { (float)moduleToDraw.vessel.dynamicPressurekPa, 100 * moduleToDraw.currentDeflection / moduleToDraw.deflection });
                         display.drawPoints(listToDraw, maxX, maxY, true);
                     }
@@ -76,6 +87,9 @@ namespace Dynamic_Controls
 
         public void OnGUI()
         {
+            if (!(HighLogic.LoadedSceneIsFlight || HighLogic.LoadedSceneIsEditor))
+                return;
+
             if (moduleToDraw == null)
                 return;
 
@@ -104,17 +118,12 @@ namespace Dynamic_Controls
         int focus = -1;
         private void drawWindow(int id)
         {
-            if (moduleToDraw.deflectionAtValue == null)
-                moduleToDraw.deflectionAtValue = new List<List<float>>();
+            if (moduleToDraw.deflectionAtPressure == null)
+                moduleToDraw.deflectionAtPressure = new List<List<float>>();
 
             GUILayout.Label("100% deflection: " + Math.Abs(moduleToDraw.deflection).ToString("0.0") + " degrees");
             if (HighLogic.LoadedSceneIsFlight)
-            {
-                if (moduleToDraw is ModuleDynamicDeflection)
-                    GUILayout.Label("Deflect @ Q(" + moduleToDraw.vessel.dynamicPressurekPa.ToString("0") + ") = " + Math.Abs(moduleToDraw.currentDeflection).ToString("0.0") + "(" + (moduleToDraw.currentDeflection * 100 / moduleToDraw.deflection).ToString("0") + "%)");
-                else
-                    GUILayout.Label("Deflect @ T(" + moduleToDraw + ") = " + Math.Abs(moduleToDraw.currentDeflection).ToString("0.0") + "(" + (moduleToDraw.currentDeflection * 100 / moduleToDraw.deflection).ToString("0") + "%)");
-            }
+                GUILayout.Label("Deflect @ Q(" + moduleToDraw.vessel.dynamicPressurekPa.ToString("0") + ") = " + Math.Abs(moduleToDraw.currentDeflection).ToString("0.0") + "(" + (moduleToDraw.currentDeflection * 100 / moduleToDraw.deflection).ToString("0") + "%)");
             GUILayout.Box("", GUILayout.Height(10));
             GUILayout.BeginHorizontal();
             GUILayout.Space(77);
@@ -122,9 +131,9 @@ namespace Dynamic_Controls
             GUILayout.Label("% Deflect", GUILayout.Width(57));
             GUILayout.EndHorizontal();
 
-            for (int i = 0; i < moduleToDraw.deflectionAtValue.Count; i++)
+            for (int i = 0; i < moduleToDraw.deflectionAtPressure.Count; i++)
             {
-                List<float> list = moduleToDraw.deflectionAtValue[i];
+                List<float> list = moduleToDraw.deflectionAtPressure[i];
                 if (list.Count < 2)
                     continue;
 
@@ -136,7 +145,7 @@ namespace Dynamic_Controls
                     removeFocus();
                 }
                 list[0] = float.Parse(GUILayout.TextField(list[0].ToString("0.0#"), GUILayout.Width(60)));
-                if (moduleToDraw.deflectionAtValue.Count - 1 == i)
+                if (moduleToDraw.deflectionAtPressure.Count - 1 == i)
                     GUI.SetNextControlName("deflection");
                 string tmp = GUILayout.TextField(list[1] == 0 ? "" : list[1].ToString("0.0"), GUILayout.Width(60));
                 if (tmp != "")
@@ -164,8 +173,8 @@ namespace Dynamic_Controls
                 List<float> newEntry = new List<float>();
                 newEntry.Add(Mathf.Abs(float.Parse(dynPressure)));
                 newEntry.Add(Mathf.Abs(deflection != "" ? float.Parse(deflection) : 0));
-                moduleToDraw.deflectionAtValue = moduleToDraw.deflectionAtValue.OrderBy(x => x[0]).ToList(); // sort exisint entries
-                moduleToDraw.deflectionAtValue.Add(newEntry); // add new entry to end
+                moduleToDraw.deflectionAtPressure = moduleToDraw.deflectionAtPressure.OrderBy(x => x[0]).ToList(); // sort exisint entries
+                moduleToDraw.deflectionAtPressure.Add(newEntry); // add new entry to end
                 dynPressure = deflection = "";
                 focus = 5;
             }
@@ -173,7 +182,7 @@ namespace Dynamic_Controls
 
             if (GUILayout.Button("Copy to all"))
             {
-                moduleToDraw.copyToAll();
+                copyToAll();
                 removeFocus();
             }
             GUILayout.Box("", GUILayout.Height(10));
@@ -181,8 +190,8 @@ namespace Dynamic_Controls
             GUILayout.Label("Defaults: ");
             if (GUILayout.Button("Update"))
             {
-                ConfigNode node = new ConfigNode(moduleToDraw.nodeName);
-                moduleToDraw.UpdateDefaults(toConfigNode(moduleToDraw.deflectionAtValue, node, true));
+                ConfigNode node = new ConfigNode(nodeName);
+                ModuleDynamicDeflection.defaults = toConfigNode(moduleToDraw.deflectionAtPressure, node, true);
                 writeDefaultsToFile();
             }
             if (GUILayout.Button("Restore"))
@@ -223,13 +232,46 @@ namespace Dynamic_Controls
             GUI.DragWindow();
         }
 
+        // copy to every control surface on the vessel, not just the sym counterparts
+        private void copyToAll()
+        {
+            if (HighLogic.LoadedSceneIsEditor)
+            {
+                foreach (Part p in EditorLogic.fetch.getSortedShipList())
+                {
+                    if (p == null)
+                        continue;
+                    if (p.Modules.Contains("ModuleDynamicDeflection"))
+                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure);
+                }
+            }
+            else
+            {
+                foreach (Part p in moduleToDraw.vessel.parts)
+                {
+                    if (p == null)
+                        continue;
+                    if (p.Modules.Contains("ModuleDynamicDeflection"))
+                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure);
+                }
+            }
+        }
+
+        // need to make a copy of all subelements of the lists to prevent them permanently linking
+        public static void copyToModule(ModuleDynamicDeflection m, List<List<float>> list)
+        {
+            m.deflectionAtPressure = new List<List<float>>();
+            foreach (List<float> kvp in list)
+                m.deflectionAtPressure.Add(new List<float>(kvp));
+        }
+
         private void removeFocus()
         {
             GUI.FocusControl("Copy to all");
             GUI.UnfocusWindow();
         }
 
-        public void selectNewPart(DynamicModule module)
+        public void selectNewPart(ModuleDynamicDeflection module)
         {
             moduleToDraw = module;
             deflection = dynPressure = "";
