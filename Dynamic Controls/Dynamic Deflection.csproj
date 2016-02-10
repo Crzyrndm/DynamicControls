@@ -48,7 +48,9 @@
   <ItemGroup>
     <Compile Include="EditorWindow.cs" />
     <Compile Include="Display.cs" />
+    <Compile Include="EditorWindowGimbal.cs" />
     <Compile Include="ModuleDynamicDeflection.cs" />
+    <Compile Include="ModuleDynamicGimbal.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
