@@ -131,9 +131,9 @@ namespace Dynamic_Controls
             currentDeflection = Mathf.Clamp(Evaluate(deflectionAtPressure, (float)vessel.dynamicPressurekPa) * deflection, -89, 89);
 
             if (usingFAR)
-                farValToSet.SetValue(module, currentDeflection);
+                farValToSet.SetValue(module, Math.Abs(currentDeflection));
             else
-                ((ModuleControlSurface)module).ctrlSurfaceRange = currentDeflection;
+                ((ModuleControlSurface)module).ctrlSurfaceRange = Math.Abs(currentDeflection);
         }
 
         private void OnMouseOver()
