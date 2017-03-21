@@ -7,23 +7,28 @@ using System.Reflection;
 
 namespace Dynamic_Controls
 {
+    public class AeroPair
+    {
+        public float Q;
+        public float deflection;
+
+        public AeroPair(float q, float deflect)
+        {
+            Q = q;
+            deflection = deflect;
+        }
+    }
+
     public class ModuleDynamicDeflection : PartModule
     {
-        public List<List<float>> deflectionAtPressure; // int[0] = q, int[1] = deflection
-        private bool usingFAR;
+        public List<AeroPair> deflectionAtPressure; // int[0] = q, int[1] = deflection
+
+        public ModuleInterface aeroModule;
 
         public static ConfigNode defaults;
 
-        private PartModule module;
-        private FieldInfo farValToSet;
-
         /// <summary>
-        /// The 100% deflection level
-        /// </summary>
-        public float deflection;
-
-        /// <summary>
-        /// The current max delfection angle
+        /// The current max deflection angle
         /// </summary>
         public float currentDeflection;
         bool loaded = false;
@@ -32,8 +37,7 @@ namespace Dynamic_Controls
         {
             try
             {
-                if (deflectionAtPressure == null)
-                    deflectionAtPressure = new List<List<float>>();
+                deflectionAtPressure = deflectionAtPressure ?? new List<AeroPair>();
                 LoadConfig(node);
                 loaded = true;
             }
@@ -47,79 +51,63 @@ namespace Dynamic_Controls
 
         public void LoadConfig(ConfigNode node, bool loadingDefaults = false)
         {
-            if (node.HasValue("deflection"))
-                float.TryParse(node.GetValue("deflection"), out deflection);
             deflectionAtPressure.Clear();
             foreach (string s in node.GetValues("key"))
             {
                 string[] kvp = s.Split(',');
-                List<float> val = new List<float>() { Mathf.Abs(float.Parse(kvp[0].Trim())), Mathf.Abs(float.Parse(kvp[1].Trim())) };
-                deflectionAtPressure.Add(val);
+                deflectionAtPressure.Add(new AeroPair(Mathf.Abs(float.Parse(kvp[0].Trim())), Mathf.Abs(float.Parse(kvp[1].Trim()))));
             }
             if (deflectionAtPressure.Count == 0)
             {
                 if (loadingDefaults)
                 {
-                    deflectionAtPressure.Add(new List<float>() { 0, 100 });
+                    deflectionAtPressure.Add(new AeroPair(0, 100));
                     defaults.AddValue("key", "0,100");
                 }
                 else
                 {
-                    if (defaults == null)
-                        defaults = new ConfigNode(EditorWindow.nodeName);
-
+                    defaults = defaults ?? new ConfigNode(EditorWindow.nodeName);
                     LoadConfig(defaults, true);
                 }
             }
         }
 
+
         public void Start()
         {
-            usingFAR = AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name.Equals("FerramAerospaceResearch", StringComparison.InvariantCultureIgnoreCase));
-            if (part.Modules.Contains("FARControllableSurface"))
-                module = part.Modules["FARControllableSurface"];
-            else if (part.Modules.OfType<ModuleControlSurface>().Any())
-                module = part.Modules.OfType<ModuleControlSurface>().FirstOrDefault();
-
-            if (usingFAR)
-                farValToSet = module.GetType().GetField("maxdeflect");
+            if (AssemblyLoader.loadedAssemblies.Any(a => a.assembly.GetName().Name.Equals("FerramAerospaceResearch", StringComparison.InvariantCultureIgnoreCase)))
+            {
+                aeroModule = new FARModule(part);
+            }
+            else
+            {
+                aeroModule = new StockModule(part.Modules.GetModule<ModuleControlSurface>());
+            }
 
             if (deflectionAtPressure == null)
             {
-                deflectionAtPressure = new List<List<float>>();
-
-                if (defaults == null)
-                    defaults = new ConfigNode(EditorWindow.nodeName);
+                deflectionAtPressure = new List<AeroPair>();
+                defaults = defaults ?? new ConfigNode(EditorWindow.nodeName);
                 LoadConfig(defaults, true);
             }
 
             if (!loaded)
             {
-                if (usingFAR)
-                    deflection = (float)farValToSet.GetValue(module);
-                else
-                    deflection = ((ModuleControlSurface)module).ctrlSurfaceRange;
                 loaded = true;
             }
         }
 
         public void Update()
         {
-            if (HighLogic.LoadedSceneIsEditor)
-            {
-                if (usingFAR)
-                    deflection = (float)farValToSet.GetValue(module);
-                else
-                    deflection = ((ModuleControlSurface)module).ctrlSurfaceRange;
-            }
-
             if (EditorWindow.Instance.moduleToDraw != this)
                 return;
 
             foreach (Part p in part.symmetryCounterparts)
             {
                 if (p != null)
-                    EditorWindow.copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, deflectionAtPressure);
+                {
+                    EditorWindow.copyToModule(p.Modules.GetModule<ModuleDynamicDeflection>(), deflectionAtPressure);
+                }
             }
         }
 
@@ -128,18 +116,16 @@ namespace Dynamic_Controls
             if (!HighLogic.LoadedSceneIsFlight || vessel.HoldPhysics)
                 return;
 
-            currentDeflection = Mathf.Clamp(Evaluate(deflectionAtPressure, (float)vessel.dynamicPressurekPa) * deflection, -89, 89);
-
-            if (usingFAR)
-                farValToSet.SetValue(module, currentDeflection);
-            else
-                ((ModuleControlSurface)module).ctrlSurfaceRange = currentDeflection;
+            currentDeflection = Mathf.Clamp(Evaluate(deflectionAtPressure, (float)vessel.dynamicPressurekPa) * aeroModule.GetDefaultMaxDeflect(), -89, 89);
+            aeroModule.SetMaxDeflect(currentDeflection);
         }
 
         private void OnMouseOver()
         {
             if (Input.GetKeyDown(KeyCode.K))
+            {
                 EditorWindow.Instance.selectNewPart(this);
+            }
         }
 
         public override void OnSave(ConfigNode node)
@@ -148,7 +134,7 @@ namespace Dynamic_Controls
                 return;
             try
             {
-                node = EditorWindow.toConfigNode(deflectionAtPressure, node, false, deflection);
+                node = EditorWindow.toConfigNode(deflectionAtPressure, node, false);
                 base.OnSave(node);
             }
             catch (Exception ex)
@@ -197,36 +183,110 @@ namespace Dynamic_Controls
         /// <param name="listToEvaluate">List of (x,y) pairs to interpolate between</param>
         /// <param name="x">the x-value to interpolate to</param>
         /// <returns>the fraction the value interpolates to</returns>
-        public float Evaluate(List<List<float>> listToEvaluate, float x)
+        public float Evaluate(List<AeroPair> listToEvaluate, float x)
         {
-            float val;
-            int minLerpIndex = 0, maxLerpIndex = listToEvaluate.Count - 1;
-            if (listToEvaluate[listToEvaluate.Count - 2][0] > listToEvaluate[maxLerpIndex][0]) // the last value may be a freshly added value. Can ignore in that case
-                --maxLerpIndex;
-
-            if (x < lastHigh && x > lastLow)
-                val = lowVal + (highVal - lowVal) * (x - lastLow) / (lastHigh - lastLow);
-            else if (x < listToEvaluate[0][0]) // clamp to minimum dyn pressure on the list
-                val = listToEvaluate[0][1];
-            else if (x > listToEvaluate[maxLerpIndex][0]) // clamp to max dyn pressure on the list
-                val = listToEvaluate[maxLerpIndex][1];
-            else // binary search the list
+            int maxLerpIndex = listToEvaluate.Count - 1;
+            if (listToEvaluate[maxLerpIndex - 1].Q > listToEvaluate[maxLerpIndex].Q) // the last value may be a freshly added value. Can ignore in that case
             {
-                while (minLerpIndex < maxLerpIndex - 1)
-                {
-                    int midIndex = minLerpIndex + (maxLerpIndex - minLerpIndex) / 2;
-                    if (listToEvaluate[midIndex][0] > x)
-                        maxLerpIndex = midIndex;
-                    else
-                        minLerpIndex = midIndex;
-                }
-                val = listToEvaluate[minLerpIndex][1] + (x - listToEvaluate[minLerpIndex][0]) / (listToEvaluate[maxLerpIndex][0] - listToEvaluate[minLerpIndex][0]) * (listToEvaluate[maxLerpIndex][1] - listToEvaluate[minLerpIndex][1]);
-                lastHigh = listToEvaluate[maxLerpIndex][0];
-                highVal = listToEvaluate[maxLerpIndex][1];
-                lastLow = listToEvaluate[minLerpIndex][0];
-                lowVal = listToEvaluate[minLerpIndex][1];
+                --maxLerpIndex;
             }
-            return val / 100;
+            switch (x)
+            {
+                // still within previous bounds
+                case var test when test < lastHigh && test > lastLow:
+                    x = lowVal + (highVal - lowVal) * (x - lastLow) / (lastHigh - lastLow);
+                    break;
+                // less than min val
+                case var test when test < listToEvaluate[0].Q:
+                    x = listToEvaluate[0].deflection;
+                    break;
+                // if currently exceeding the max val
+                case var test when test > listToEvaluate[maxLerpIndex].Q:
+                    x = listToEvaluate[maxLerpIndex].deflection;
+                    break;
+                // search for new bounds
+                default:
+                    int minLerpIndex = 0;
+                    while (minLerpIndex < maxLerpIndex - 1)
+                    {
+                        int midIndex = minLerpIndex + (maxLerpIndex - minLerpIndex) / 2;
+                        if (listToEvaluate[midIndex].Q > x)
+                        {
+                            maxLerpIndex = midIndex;
+                        }
+                        else
+                        {
+                            minLerpIndex = midIndex;
+                        }
+                    }
+                    x = listToEvaluate[minLerpIndex].deflection + 
+                        (x - listToEvaluate[minLerpIndex].Q) / (listToEvaluate[maxLerpIndex].Q - listToEvaluate[minLerpIndex].Q) * (listToEvaluate[maxLerpIndex].deflection - listToEvaluate[minLerpIndex].deflection);
+                    lastHigh = listToEvaluate[maxLerpIndex].Q;
+                    highVal = listToEvaluate[maxLerpIndex].deflection;
+                    lastLow = listToEvaluate[minLerpIndex].Q;
+                    lowVal = listToEvaluate[minLerpIndex].deflection;
+                    break;
+            }
+            return x / 100;
         }
+    }
+
+    public interface ModuleInterface
+    {
+        float GetDefaultMaxDeflect();
+        float GetMaxDeflect();
+        void SetMaxDeflect(float val);
+    }
+
+    public class StockModule : ModuleInterface
+    {
+        public StockModule(ModuleControlSurface module)
+        {
+            controlSurface = module;
+        }
+
+        public float GetMaxDeflect()
+        {
+            return controlSurface.ctrlSurfaceRange;
+        }
+
+        public void SetMaxDeflect(float val)
+        {
+            controlSurface.ctrlSurfaceRange = val;
+        }
+
+        public float GetDefaultMaxDeflect()
+        {
+            return controlSurface.part.partInfo.partPrefab.Modules.GetModule<ModuleControlSurface>().ctrlSurfaceRange;
+        }
+
+        private ModuleControlSurface controlSurface;
+    }
+
+    public class FARModule : ModuleInterface
+    {
+        public FARModule(Part p)
+        {
+            controlSurface = p.Modules["FARControllableSurface"];
+            farValToSet = controlSurface.GetType().GetField("maxdeflect");
+        }
+
+        public float GetMaxDeflect()
+        {
+            return (float)farValToSet.GetValue(controlSurface);
+        }
+
+        public void SetMaxDeflect(float val)
+        {
+            farValToSet.SetValue(controlSurface, val);
+        }
+
+        public float GetDefaultMaxDeflect()
+        {
+            return (float)farValToSet.GetValue(controlSurface.part.partInfo.partPrefab.Modules["FARControllableSurface"]);
+        }
+
+        private PartModule controlSurface;
+        private FieldInfo farValToSet;
     }
 }

@@ -27,14 +27,14 @@ namespace Dynamic_Controls
             displayTex.SetPixels32(background);
         }
 
-        public void drawPoints(List<List<float>> listToDraw, int x_max, int y_max, bool lastIsGreen)
+        public void drawPoints(List<AeroPair> listToDraw, int x_max, int y_max, bool lastIsGreen)
         {
             Clear();
             for (int i = 0; i < listToDraw.Count; i++)
             {
-                List<float> l = listToDraw[i];
-                int xLoc = (int)Mathf.Clamp(l[0] * displayTex.width / x_max, 2, displayTex.width - 3);
-                int yLoc = (int)Mathf.Clamp(l[1] * displayTex.height / y_max, 2, displayTex.height - 3);
+                AeroPair l = listToDraw[i];
+                int xLoc = (int)Mathf.Clamp(l.Q * displayTex.width / x_max, 2, displayTex.width - 3);
+                int yLoc = (int)Mathf.Clamp(l.deflection * displayTex.height / y_max, 2, displayTex.height - 3);
 
                 for (int j = -2; j <= 2; j++)
                 {
