@@ -23,7 +23,7 @@ namespace Dynamic_Controls
     {
         public List<AeroPair> deflectionAtPressure; // int[0] = q, int[1] = deflection
 
-        public ModuleInterface aeroModule;
+        public IModuleInterface aeroModule;
 
         public static ConfigNode defaults;
 
@@ -106,7 +106,7 @@ namespace Dynamic_Controls
             {
                 if (p != null)
                 {
-                    EditorWindow.copyToModule(p.Modules.GetModule<ModuleDynamicDeflection>(), deflectionAtPressure);
+                    EditorWindow.CopyToModule(p.Modules.GetModule<ModuleDynamicDeflection>(), deflectionAtPressure);
                 }
             }
         }
@@ -124,7 +124,7 @@ namespace Dynamic_Controls
         {
             if (Input.GetKeyDown(KeyCode.K))
             {
-                EditorWindow.Instance.selectNewPart(this);
+                EditorWindow.Instance.SelectNewPart(this);
             }
         }
 
@@ -134,7 +134,7 @@ namespace Dynamic_Controls
                 return;
             try
             {
-                node = EditorWindow.toConfigNode(deflectionAtPressure, node, false);
+                node = EditorWindow.ToConfigNode(deflectionAtPressure, node, false);
                 base.OnSave(node);
             }
             catch (Exception ex)
@@ -148,7 +148,7 @@ namespace Dynamic_Controls
         #region logging
         private void LateUpdate()
         {
-            dumpLog();
+            DumpLog();
         }
 
         // list of everything to log in the next update from all loaded modules
@@ -158,7 +158,7 @@ namespace Dynamic_Controls
             toLog.Add(objectToLog);
         }
 
-        private void dumpLog()
+        private void DumpLog()
         {
             if (toLog.Count == 0)
                 return;
@@ -231,14 +231,14 @@ namespace Dynamic_Controls
         }
     }
 
-    public interface ModuleInterface
+    public interface IModuleInterface
     {
         float GetDefaultMaxDeflect();
         float GetMaxDeflect();
         void SetMaxDeflect(float val);
     }
 
-    public class StockModule : ModuleInterface
+    public class StockModule : IModuleInterface
     {
         public StockModule(ModuleControlSurface module)
         {
@@ -263,7 +263,7 @@ namespace Dynamic_Controls
         private ModuleControlSurface controlSurface;
     }
 
-    public class FARModule : ModuleInterface
+    public class FARModule : IModuleInterface
     {
         public FARModule(Part p)
         {

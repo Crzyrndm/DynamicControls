@@ -38,7 +38,7 @@ namespace Dynamic_Controls
             moduleToDraw = null;
 
             display = new Display(160, 200);
-            StartCoroutine(slowUpdate());
+            StartCoroutine(SlowUpdate());
         }
 
         public void Update()
@@ -58,7 +58,7 @@ namespace Dynamic_Controls
             }
         }
 
-        IEnumerator slowUpdate()
+        IEnumerator SlowUpdate()
         {
             yield return new WaitForSeconds(2f); // make sure everything is initialised...
             while (HighLogic.LoadedSceneIsEditor || HighLogic.LoadedSceneIsFlight)
@@ -69,16 +69,18 @@ namespace Dynamic_Controls
                     continue;
 
                 moduleToDraw.deflectionAtPressure.RemoveAll(l => l.Q < 0 || l.deflection < 0); // set less than zero to remove from list
-                maxX = (int)(getMaxX(moduleToDraw.deflectionAtPressure) + 10);
-                maxY = (int)Math.Min((getMaxY(moduleToDraw.deflectionAtPressure) + 10), 150);
+                maxX = (int)(GetMaxX(moduleToDraw.deflectionAtPressure) + 10);
+                maxY = (int)Math.Min((GetMaxY(moduleToDraw.deflectionAtPressure) + 10), 150);
                 if (showDisplay)
                 {
                     if (HighLogic.LoadedSceneIsEditor)
                         display.drawPoints(moduleToDraw.deflectionAtPressure, maxX, maxY, false);
                     else if (HighLogic.LoadedSceneIsFlight)
                     {
-                        List<AeroPair> listToDraw = new List<AeroPair>(moduleToDraw.deflectionAtPressure);
-                        listToDraw.Add(new AeroPair((float)moduleToDraw.vessel.dynamicPressurekPa, 100 * moduleToDraw.currentDeflection / moduleToDraw.aeroModule.GetDefaultMaxDeflect()));
+                        List<AeroPair> listToDraw = new List<AeroPair>(moduleToDraw.deflectionAtPressure)
+                        {
+                            new AeroPair((float)moduleToDraw.vessel.dynamicPressurekPa, 100 * moduleToDraw.currentDeflection / moduleToDraw.aeroModule.GetDefaultMaxDeflect())
+                        };
                         display.drawPoints(listToDraw, maxX, maxY, true);
                     }
                 }
@@ -93,7 +95,7 @@ namespace Dynamic_Controls
             if (moduleToDraw == null)
                 return;
 
-            windowRect = GUILayout.Window(7463908, windowRect, drawWindow, "");
+            windowRect = GUILayout.Window(7463908, windowRect, DrawWindow, "");
             if (HighLogic.LoadedSceneIsEditor)
             {
                 Vector2 mouse = Input.mousePosition;
@@ -105,7 +107,7 @@ namespace Dynamic_Controls
             }
         }
 
-        public void writeDefaultsToFile()
+        public void WriteDefaultsToFile()
         {
             if (ModuleDynamicDeflection.defaults == null)
                 return;
@@ -116,7 +118,7 @@ namespace Dynamic_Controls
         }
 
         int focus = -1;
-        private void drawWindow(int id)
+        private void DrawWindow(int id)
         {
             if (moduleToDraw.deflectionAtPressure == null)
                 moduleToDraw.deflectionAtPressure = new List<AeroPair>();
@@ -143,7 +145,7 @@ namespace Dynamic_Controls
                 {
                     list.deflection = -1;
                     windowRect.height = 0;
-                    removeFocus();
+                    RemoveFocus();
                 }
                 list.Q = float.Parse(GUILayout.TextField(list.Q.ToString("0.0#"), GUILayout.Width(60)));
                 if (moduleToDraw.deflectionAtPressure.Count - 1 == i)
@@ -181,8 +183,8 @@ namespace Dynamic_Controls
 
             if (GUILayout.Button("Copy to all"))
             {
-                copyToAll();
-                removeFocus();
+                CopyToAll();
+                RemoveFocus();
             }
             GUILayout.Box("", GUILayout.Height(10));
             GUILayout.BeginHorizontal();
@@ -190,8 +192,8 @@ namespace Dynamic_Controls
             if (GUILayout.Button("Update"))
             {
                 ConfigNode node = new ConfigNode(nodeName);
-                ModuleDynamicDeflection.defaults = toConfigNode(moduleToDraw.deflectionAtPressure, node, true);
-                writeDefaultsToFile();
+                ModuleDynamicDeflection.defaults = ToConfigNode(moduleToDraw.deflectionAtPressure, node, true);
+                WriteDefaultsToFile();
             }
             if (GUILayout.Button("Restore"))
             {
@@ -232,7 +234,7 @@ namespace Dynamic_Controls
         }
 
         // copy to every control surface on the vessel, not just the sym counterparts
-        private void copyToAll()
+        private void CopyToAll()
         {
             if (HighLogic.LoadedSceneIsEditor)
             {
@@ -241,7 +243,7 @@ namespace Dynamic_Controls
                     if (p == null)
                         continue;
                     if (p.Modules.Contains("ModuleDynamicDeflection"))
-                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure);
+                        CopyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure);
                 }
             }
             else
@@ -251,26 +253,26 @@ namespace Dynamic_Controls
                     if (p == null)
                         continue;
                     if (p.Modules.Contains("ModuleDynamicDeflection"))
-                        copyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure);
+                        CopyToModule(p.Modules["ModuleDynamicDeflection"] as ModuleDynamicDeflection, moduleToDraw.deflectionAtPressure);
                 }
             }
         }
 
         // need to make a copy of all subelements of the lists to prevent them permanently linking
-        public static void copyToModule(ModuleDynamicDeflection m, List<AeroPair> list)
+        public static void CopyToModule(ModuleDynamicDeflection m, List<AeroPair> list)
         {
             m.deflectionAtPressure = new List<AeroPair>();
             foreach (AeroPair kvp in list)
                 m.deflectionAtPressure.Add(kvp);
         }
 
-        private void removeFocus()
+        private void RemoveFocus()
         {
             GUI.FocusControl("Copy to all");
             GUI.UnfocusWindow();
         }
 
-        public void selectNewPart(ModuleDynamicDeflection module)
+        public void SelectNewPart(ModuleDynamicDeflection module)
         {
             if (module == moduleToDraw)
                 return;
@@ -280,7 +282,7 @@ namespace Dynamic_Controls
             windowRect.height = 0;
         }
 
-        public static ConfigNode toConfigNode(List<AeroPair> list, ConfigNode node, bool defaults, float fullDeflect = 0)
+        public static ConfigNode ToConfigNode(List<AeroPair> list, ConfigNode node, bool defaults, float fullDeflect = 0)
         {
             if (!defaults)
                 node.AddValue("deflection", fullDeflect); // defaults can't save 100% deflection
@@ -291,12 +293,12 @@ namespace Dynamic_Controls
             return node;
         }
 
-        public float getMaxX(List<AeroPair> list)
+        public float GetMaxX(List<AeroPair> list)
         {
             return list.Max(l => l.Q);
         }
 
-        public float getMaxY(List<AeroPair> list)
+        public float GetMaxY(List<AeroPair> list)
         {
             return list.Max(l => l.deflection);
         }
