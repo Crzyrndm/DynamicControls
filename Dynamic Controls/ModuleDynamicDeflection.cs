@@ -1,9 +1,8 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
-using System.Reflection;
 
 namespace Dynamic_Controls
 {
@@ -21,7 +20,7 @@ namespace Dynamic_Controls
 
     public class ModuleDynamicDeflection : PartModule
     {
-        public List<AeroPair> deflectionAtPressure; // int[0] = q, int[1] = deflection
+        public List<AeroPair> deflectionAtPressure;
 
         public IModuleInterface aeroModule;
 
@@ -90,18 +89,15 @@ namespace Dynamic_Controls
                 defaults = defaults ?? new ConfigNode(EditorWindow.nodeName);
                 LoadConfig(defaults, true);
             }
-
-            if (!loaded)
-            {
-                loaded = true;
-            }
+            loaded = true;
         }
 
         public void Update()
         {
             if (EditorWindow.Instance.moduleToDraw != this)
+            {
                 return;
-
+            }
             foreach (Part p in part.symmetryCounterparts)
             {
                 if (p != null)
@@ -114,10 +110,11 @@ namespace Dynamic_Controls
         public void FixedUpdate()
         {
             if (!HighLogic.LoadedSceneIsFlight || vessel.HoldPhysics)
+            {
                 return;
-
+            }
             currentDeflection = Mathf.Clamp(Evaluate(deflectionAtPressure, (float)vessel.dynamicPressurekPa) * aeroModule.GetDefaultMaxDeflect(), -89, 89);
-            aeroModule.SetMaxDeflect(currentDeflection);
+            aeroModule.SetMaxDeflect(Math.Abs(currentDeflection));
         }
 
         private void OnMouseOver()
@@ -131,7 +128,9 @@ namespace Dynamic_Controls
         public override void OnSave(ConfigNode node)
         {
             if (!loaded)
+            {
                 return;
+            }
             try
             {
                 node = EditorWindow.ToConfigNode(deflectionAtPressure, node, false);
@@ -146,33 +145,10 @@ namespace Dynamic_Controls
         }
 
         #region logging
-        private void LateUpdate()
-        {
-            DumpLog();
-        }
 
-        // list of everything to log in the next update from all loaded modules
-        static List<object> toLog = new List<object>();
         private void Log(object objectToLog)
         {
-            toLog.Add(objectToLog);
-        }
-
-        private void DumpLog()
-        {
-            if (toLog.Count == 0)
-                return;
-
-            string s = "";
-            foreach (object o in toLog)
-            {
-                if (o == null)
-                    continue;
-                s += o.ToString() + "\r\n";
-            }
-            Debug.Log(s);
-
-            toLog.Clear();
+            Debug.Log($"[Dynamic Deflection] {objectToLog.ToString()}");
         }
         #endregion
 
@@ -229,64 +205,5 @@ namespace Dynamic_Controls
             }
             return x / 100;
         }
-    }
-
-    public interface IModuleInterface
-    {
-        float GetDefaultMaxDeflect();
-        float GetMaxDeflect();
-        void SetMaxDeflect(float val);
-    }
-
-    public class StockModule : IModuleInterface
-    {
-        public StockModule(ModuleControlSurface module)
-        {
-            controlSurface = module;
-        }
-
-        public float GetMaxDeflect()
-        {
-            return controlSurface.ctrlSurfaceRange;
-        }
-
-        public void SetMaxDeflect(float val)
-        {
-            controlSurface.ctrlSurfaceRange = val;
-        }
-
-        public float GetDefaultMaxDeflect()
-        {
-            return controlSurface.part.partInfo.partPrefab.Modules.GetModule<ModuleControlSurface>().ctrlSurfaceRange;
-        }
-
-        private ModuleControlSurface controlSurface;
-    }
-
-    public class FARModule : IModuleInterface
-    {
-        public FARModule(Part p)
-        {
-            controlSurface = p.Modules["FARControllableSurface"];
-            farValToSet = controlSurface.GetType().GetField("maxdeflect");
-        }
-
-        public float GetMaxDeflect()
-        {
-            return (float)farValToSet.GetValue(controlSurface);
-        }
-
-        public void SetMaxDeflect(float val)
-        {
-            farValToSet.SetValue(controlSurface, val);
-        }
-
-        public float GetDefaultMaxDeflect()
-        {
-            return (float)farValToSet.GetValue(controlSurface.part.partInfo.partPrefab.Modules["FARControllableSurface"]);
-        }
-
-        private PartModule controlSurface;
-        private FieldInfo farValToSet;
     }
 }

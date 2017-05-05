@@ -52,8 +52,11 @@
   <ItemGroup>
     <Compile Include="EditorWindow.cs" />
     <Compile Include="Display.cs" />
+    <Compile Include="FARModule.cs" />
+    <Compile Include="IModuleInterface.cs" />
     <Compile Include="ModuleDynamicDeflection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StockModule.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
